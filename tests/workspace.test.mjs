@@ -117,3 +117,16 @@ test("routes round-trip and legacy hashes still resolve", () => {
     tab: "drafts",
   });
 });
+
+test("scoped workspace notes are kept under their place", () => {
+  const legacy = {
+    ...initialState,
+    researchNotes: { river: "Book the 11am" },
+    workspaceNotes: { "trip-abc:river": "Bring a jacket", "collection-x:gage": "Ask for the patio" },
+  };
+  const once = migrateWorkspace(legacy);
+  assert.match(once.researchNotes.river, /Book the 11am/);
+  assert.match(once.researchNotes.river, /Bring a jacket/);
+  assert.equal(once.researchNotes.gage, "Ask for the patio");
+  assert.deepEqual(migrateWorkspace(once).researchNotes, once.researchNotes);
+});

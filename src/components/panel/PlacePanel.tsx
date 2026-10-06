@@ -22,6 +22,7 @@ import PhotoGallery from "../PhotoGallery";
 import RouteMap from "../RouteMap";
 import WhyItFits from "./WhyItFits";
 import Compare from "./Compare";
+import Hint from "../Hint";
 
 const kindLabel = {
   stay: "Place to stay",
@@ -90,6 +91,10 @@ export default function PlacePanel({
         <span>{place.price}</span>
       </p>
 
+      <Hint id="panel-why">
+        “Why it fits you” shows what drives the score. Tap “Not me” on anything
+        that’s wrong and your matches update.
+      </Hint>
       <WhyItFits
         place={place}
         state={state}

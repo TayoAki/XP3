@@ -484,14 +484,12 @@ function applyAll(
     a.dayId === b.dayId ? b.index - a.index : a.dayId.localeCompare(b.dayId),
   );
   app.applySwap(ordered[0].dayId, ordered[0].index, ordered[0].after, {
-    batch: ordered
-      .slice(1)
-      .map((p) => ({
-        dayId: p.dayId,
-        index: p.index,
-        after: p.after,
-        before: p.before,
-      })),
+    batch: ordered.slice(1).map((p) => ({
+      dayId: p.dayId,
+      index: p.index,
+      after: p.after,
+      before: p.before,
+    })),
     label: `Applied ${valid.length} suggested ${valid.length === 1 ? "change" : "changes"}${stale ? `; skipped ${stale} that no longer applied` : ""}.`,
   });
 }

@@ -56,17 +56,24 @@ export default function VisitPanel({
 
   const save = () => {
     const before = app.state;
+    const reviewId = crypto.randomUUID();
     const next: State = {
       ...before,
       tasteSignals: {
         ...before.tasteSignals,
-        [placeId]: { rating, liked, disliked, reasons: liked },
+        [placeId]: {
+          rating,
+          liked,
+          disliked,
+          reasons: liked,
+          ...(visibility === "public" ? { fromReview: reviewId } : {}),
+        },
       },
       reviews:
         visibility === "public"
           ? [
               {
-                id: crypto.randomUUID(),
+                id: reviewId,
                 placeId,
                 rating,
                 text: text.trim(),

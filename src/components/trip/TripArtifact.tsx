@@ -36,6 +36,7 @@ import RouteMap from "../RouteMap";
 import { Photo } from "../PlaceCard";
 import { slotName } from "../panel/SwapPanel";
 import { keepAsIdeas } from "../../collections";
+import Hint from "../Hint";
 
 const dateOf = (trip: Trip, i: number) => {
   const d = new Date(trip.brief.start + "T12:00:00");
@@ -126,6 +127,10 @@ export default function TripArtifact({ trip }: { trip: Trip }) {
         </p>
       )}
 
+      <Hint id="trip-research">
+        Tap any stop, map pin or hotel to research it beside your plan. Nothing
+        changes until you choose.
+      </Hint>
       <section className="artifact-block" aria-labelledby="map-title">
         <div className="block-head">
           <h3 id="map-title">
@@ -287,6 +292,12 @@ export default function TripArtifact({ trip }: { trip: Trip }) {
                           : app.openPanel({ kind: "place", id: stays[0].id })
                       }
                     />
+                  )}
+                  {i === 0 && (
+                    <Hint id="trip-swap">
+                      Swap shows alternatives and what each does to your day.
+                      Every change can be undone.
+                    </Hint>
                   )}
                   <ol className="stop-list">
                     {d.places.map((id, j) => (

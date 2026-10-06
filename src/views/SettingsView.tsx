@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   SlidersHorizontal,
   FlaskConical,
@@ -55,18 +55,36 @@ export function SettingsView({ onOpenContext }: { onOpenContext: () => void }) {
   const app = useApp();
   const section =
     app.loc.route.view === "settings" ? app.loc.route.section : "general";
-  const title = sections.find((s) => s[0] === section)![1];
+  // Every section is on one page; the route only says where to scroll.
+  useEffect(() => {
+    if (section === "general") return;
+    document
+      .getElementById(`settings-${section}`)
+      ?.scrollIntoView({ block: "start" });
+  }, [section]);
   return (
     <div className="page narrow">
       <PageHeader
-        title={title}
-        subtitle="Settings"
+        title="Settings"
+        subtitle="Preferences, preview tools and your data."
         onOpenContext={onOpenContext}
       />
-      {section === "general" && <General />}
-      {section === "preview" && <PreviewTools />}
-      {section === "privacy" && <Privacy />}
-      {section === "moderation" && <Moderation />}
+      {sections.map(([id, label, Icon]) => (
+        <section
+          key={id}
+          id={`settings-${id}`}
+          className="settings-section"
+          aria-labelledby={`settings-${id}-title`}
+        >
+          <h2 id={`settings-${id}-title`}>
+            <Icon size={20} /> {label}
+          </h2>
+          {id === "general" && <General />}
+          {id === "preview" && <PreviewTools />}
+          {id === "privacy" && <Privacy />}
+          {id === "moderation" && <Moderation />}
+        </section>
+      ))}
     </div>
   );
 }

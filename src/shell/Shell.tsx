@@ -59,10 +59,13 @@ export function Rail({
             <span className="rail-icon">
               <Icon size={20} />
               {id === "inbox" && unread > 0 && (
-                <span className="rail-dot" aria-label={`${unread} unread`} />
+                <span className="rail-dot" aria-hidden="true" />
               )}
             </span>
             <span>{label}</span>
+            {id === "inbox" && unread > 0 && (
+              <span className="sr-only">, {unread} unread</span>
+            )}
           </button>
         ))}
       </div>

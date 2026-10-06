@@ -103,7 +103,14 @@ export type State = {
   tripGuideDismissed?: boolean;
   tasteSignals?: Record<
     string,
-    { rating: number; reasons: string[]; liked?: string[]; disliked?: string[] }
+    {
+      rating: number;
+      reasons: string[];
+      liked?: string[];
+      disliked?: string[];
+      /** Set when the rating came from one of your reviews. */
+      fromReview?: string;
+    }
   >;
   researchNotes?: Record<string, string>;
   lessLike?: string[];
@@ -487,9 +494,20 @@ export function migrateWorkspace(state: State): State {
         note: "",
         tripId: trip.id,
       });
+  // Notes used to be kept per trip/collection; keep each one under its place.
+  const researchNotes = { ...state.researchNotes };
+  for (const [key, note] of Object.entries(state.workspaceNotes || {})) {
+    const placeId = key.split(":").pop()!;
+    const text = note.trim();
+    if (!text) continue;
+    const current = researchNotes[placeId] || "";
+    if (!current.includes(text))
+      researchNotes[placeId] = current ? `${current}\n\n${text}` : text;
+  }
   return {
     ...state,
     collections,
+    researchNotes,
     saved: [],
     savedItineraries: [],
     ideaIds: [],

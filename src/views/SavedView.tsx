@@ -402,7 +402,10 @@ function CollectionDetail({
         <div className="empty compact">
           <Lightbulb size={24} />
           <h3>An empty collection</h3>
-          <p>Add places above, or save them from Discover. No dates needed.</p>
+          <p>Add places here, or browse Discover. No dates needed.</p>
+          <Button variant="primary" onClick={() => setAdding(true)}>
+            <Plus size={16} /> Add places
+          </Button>
         </div>
       )}
       {!c.archived && c.placeIds.length > 0 && (

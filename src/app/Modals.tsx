@@ -327,6 +327,7 @@ function Review({
             [placeId]: {
               ...(s.tasteSignals?.[placeId] || { reasons: [] }),
               rating,
+              fromReview: review.id,
             },
           },
         }));
@@ -415,23 +416,25 @@ function DeleteReview({ id, onClose }: { id: string; onClose: () => void }) {
         <Button
           variant="danger"
           onClick={() => {
-            app.setState((s) => ({
-              ...s,
-              reviews: s.reviews.filter((r) => r.id !== id),
-            }));
-            app.notify(
-              "Review deleted.",
-              review
-                ? {
-                    label: "Undo",
-                    run: () =>
-                      app.setState((s) => ({
-                        ...s,
-                        reviews: [review, ...s.reviews],
-                      })),
-                  }
-                : undefined,
-            );
+            const before = {
+              reviews: app.state.reviews,
+              tasteSignals: app.state.tasteSignals,
+            };
+            app.setState((s) => {
+              const signals = { ...s.tasteSignals };
+              // A rating that came from this review goes with it.
+              if (review && signals[review.placeId]?.fromReview === id)
+                delete signals[review.placeId];
+              return {
+                ...s,
+                reviews: s.reviews.filter((r) => r.id !== id),
+                tasteSignals: signals,
+              };
+            });
+            app.notify("Review deleted. Your matches are updated.", {
+              label: "Undo",
+              run: () => app.setState((s) => ({ ...s, ...before })),
+            });
             onClose();
           }}
         >

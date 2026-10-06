@@ -1,7 +1,7 @@
 import { Settings, ArrowRight, ShieldCheck } from "lucide-react";
 import { useApp } from "../app/context";
 import type { YouTab } from "../routes";
-import { Button, Section } from "../ui";
+import { Button, IconButton, Section } from "../ui";
 import { PageHeader } from "../shell/Shell";
 import TasteStudio from "../components/TasteStudio";
 
@@ -21,6 +21,16 @@ export function YouView() {
         tabs={tabs}
         tab={tab}
         onTab={(t: YouTab) => app.go({ view: "you", tab: t })}
+        actions={
+          <IconButton
+            label="Settings"
+            onClick={() =>
+              app.go({ view: "settings", section: "general" }, null)
+            }
+          >
+            <Settings size={20} />
+          </IconButton>
+        }
       />
       {tab === "taste" && (
         <TasteStudio
