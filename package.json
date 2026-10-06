@@ -1,0 +1,28 @@
+{
+  "name": "xpmatch-journey-preview",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4180",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4180"
+  },
+  "dependencies": {
+    "@copilotkit/react-core": "^1.77.0",
+    "@copilotkit/react-ui": "^1.77.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
