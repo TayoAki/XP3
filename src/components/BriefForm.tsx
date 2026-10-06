@@ -17,7 +17,7 @@ export default function BriefForm({
     brief.end >= brief.start &&
     brief.travelers >= 1 &&
     brief.budget > 0 &&
-    (Date.parse(brief.end)-Date.parse(brief.start))/86400000 <= 6;
+    (Date.parse(brief.end) - Date.parse(brief.start)) / 86400000 <= 6;
   return (
     <div className="brief-card">
       <div className="brief-title">
@@ -30,7 +30,14 @@ export default function BriefForm({
         </div>
       </div>
       <span className="mini-label">EDITABLE TRIP BRIEF · THIS TRIP ONLY</span>
-      <div className="brief-assumptions"><strong>A starting point, not a guess you’re stuck with.</strong><p>Dates, party size and budget use demo defaults unless supplied. Interests and pace start from your taste profile. Review every field before building.</p></div>
+      <div className="brief-assumptions">
+        <strong>A starting point, not a guess you’re stuck with.</strong>
+        <p>
+          Dates, party size and budget use demo defaults unless supplied.
+          Interests and pace start from your taste profile. Review every field
+          before building.
+        </p>
+      </div>
       <div className="brief-grid">
         <label>
           Destination
@@ -92,7 +99,33 @@ export default function BriefForm({
       <div className="brief-interests">
         <span className="field-label">What you’re after</span>
         <div className="interest-options">
-          {[...new Set(["Local food","Architecture","Art & culture","Hidden gems","Nature","Good value",...brief.interests])].map(i=><button key={i} aria-pressed={brief.interests.includes(i)} className={brief.interests.includes(i)?"selected":""} onClick={()=>set("interests",brief.interests.includes(i)?brief.interests.filter(x=>x!==i):[...brief.interests,i])}>{brief.interests.includes(i)&&<Check size={12}/>} {i}</button>)}
+          {[
+            ...new Set([
+              "Local food",
+              "Architecture",
+              "Art & culture",
+              "Hidden gems",
+              "Nature",
+              "Good value",
+              ...brief.interests,
+            ]),
+          ].map((i) => (
+            <button
+              key={i}
+              aria-pressed={brief.interests.includes(i)}
+              className={brief.interests.includes(i) ? "selected" : ""}
+              onClick={() =>
+                set(
+                  "interests",
+                  brief.interests.includes(i)
+                    ? brief.interests.filter((x) => x !== i)
+                    : [...brief.interests, i],
+                )
+              }
+            >
+              {brief.interests.includes(i) && <Check size={12} />} {i}
+            </button>
+          ))}
         </div>
       </div>
       <div className="brief-origin">
@@ -107,7 +140,8 @@ export default function BriefForm({
       </p>
       {!valid && (
         <p role="alert" className="form-error">
-          Choose one to seven days, at least one traveler, and a positive budget.
+          Choose one to seven days, at least one traveler, and a positive
+          budget.
         </p>
       )}
       <button className="button primary" disabled={!valid} onClick={onGenerate}>

@@ -1,11 +1,6 @@
 import Inbox, { openConversation } from "./components/Inbox";
 import { sharedItineraries } from "./inspiration";
-import {
-  useCallback,
-  useEffect,
-  useState,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   Compass,
   Sparkles,
@@ -1009,20 +1004,22 @@ export default function App() {
         </button>
         <div className="nav-caption">YOUR WORLD</div>
         <nav aria-label="Main navigation">
-          {navigation.filter(([id]) => !standalonePreview || id !== "connected").map(([id, label, Icon]) => (
-            <button
-              key={id}
-              className={page === id ? "active" : ""}
-              aria-current={page === id ? "page" : undefined}
-              onClick={() => go(id)}
-            >
-              <Icon size={19} />
-              <span>{label}</span>
-              {id === "saved" && state.saved.length > 0 && (
-                <small>{state.saved.length}</small>
-              )}
-            </button>
-          ))}
+          {navigation
+            .filter(([id]) => !standalonePreview || id !== "connected")
+            .map(([id, label, Icon]) => (
+              <button
+                key={id}
+                className={page === id ? "active" : ""}
+                aria-current={page === id ? "page" : undefined}
+                onClick={() => go(id)}
+              >
+                <Icon size={19} />
+                <span>{label}</span>
+                {id === "saved" && state.saved.length > 0 && (
+                  <small>{state.saved.length}</small>
+                )}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-note">
