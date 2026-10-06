@@ -1,0 +1,83 @@
+/* XPMatch design tokens. Every colour, size, radius and shadow in the app
+   comes from here; component CSS never uses raw values for these. */
+:root {
+  color-scheme: light;
+
+  /* Type */
+  --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "DM Serif Display", Georgia, serif;
+  --t-12: 12px;
+  --t-14: 14px;
+  --t-16: 16px;
+  --t-20: 20px;
+  --t-28: 28px;
+  --t-40: 40px;
+  --lh-tight: 1.25;
+  --lh-body: 1.55;
+
+  /* Spacing (4px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-full: 999px;
+
+  /* Colour */
+  --ink: #1d2e45;
+  --ink-2: #425571;
+  --muted: #5d6c82;
+  --line: #e2e8f0;
+  --line-strong: #c9d4e4;
+  --canvas: #fafbfc;
+  --surface: #ffffff;
+  --surface-sunken: #f3f6fa;
+  --brand: #2157d5;
+  --brand-strong: #173e9b;
+  --brand-soft: #edf3ff;
+  --brand-line: #c7d5f1;
+  --success: #2a7454;
+  --success-soft: #e7f3ee;
+  --warning: #8a5a00;
+  --warning-soft: #fff6e5;
+  --danger: #b23f48;
+  --danger-soft: #fbecee;
+  --focus: #2157d5;
+  --scrim: rgb(16 30 50 / 0.45);
+  --on-image: #ffffff;
+  --map-land: #eef0e9;
+  --map-block: #e3e6df;
+  --map-water: #d2e6ed;
+  --map-river: #c1dce8;
+  --map-park: #cee0c6;
+
+  /* Depth */
+  --shadow-1: 0 1px 3px rgb(29 46 69 / 0.08);
+  --shadow-2: 0 8px 24px rgb(23 50 81 / 0.12);
+  --shadow-3: 0 20px 60px rgb(23 50 81 / 0.22);
+
+  /* Touch */
+  --target: 44px;
+  --target-dense: 40px;
+
+  /* Layout */
+  --rail-w: 72px;
+  --sidebar-w: 248px;
+  --panel-w: 380px;
+  --statusbar-h: 36px;
+  --tabbar-h: 64px;
+
+  /* Legacy aliases used by older component CSS */
+  --blue: var(--brand);
+  --blue-dark: var(--brand-strong);
+  --blue-soft: var(--brand-soft);
+  --serif: var(--font-serif);
+}

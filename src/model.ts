@@ -1,5 +1,5 @@
 import type { Conversation } from "./components/Inbox";
-import type { EditProposal } from "./proposals";
+import type { EditProposal } from "./proposals.ts";
 export type Collection = {
   id: string;
   name: string;

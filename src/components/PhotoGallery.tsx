@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type Place } from "../model";
 export default function PhotoGallery({ place }: { place: Place }) {
   const photos = place.photos ?? [
@@ -40,7 +41,7 @@ export default function PhotoGallery({ place }: { place: Place }) {
             setFailed(false);
           }}
         >
-          ‹
+          <ChevronLeft size={18} />
         </button>
         <span>
           {photos.length ? `${index + 1} / ${photos.length}` : "0 photos"}
@@ -53,7 +54,7 @@ export default function PhotoGallery({ place }: { place: Place }) {
             setFailed(false);
           }}
         >
-          ›
+          <ChevronRight size={18} />
         </button>
         <button onClick={() => setLarge(!large)}>
           {large ? "Compact photo" : "Enlarge photo"}

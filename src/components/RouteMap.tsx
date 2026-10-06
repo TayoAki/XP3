@@ -20,24 +20,24 @@ export default function RouteMap({
             height="42"
             patternUnits="userSpaceOnUse"
           >
-            <rect width="57" height="42" fill="#eef0e9" />
-            <rect x="5" y="5" width="47" height="32" rx="3" fill="#e3e6df" />
-            <path d="M0 0H57M0 0V42" stroke="#fff" strokeWidth="5" />
+            <rect width="57" height="42" style={{ fill: "var(--map-land)" }} />
+            <rect x="5" y="5" width="47" height="32" rx="3" style={{ fill: "var(--map-block)" }} />
+            <path d="M0 0H57M0 0V42" style={{ stroke: "var(--surface)" }} strokeWidth="5" />
           </pattern>
         </defs>
         <rect width="700" height="270" fill="url(#blocks)" />
-        <path d="M556 0L580 270H700V0" fill="#d2e6ed" />
+        <path d="M556 0L580 270H700V0" style={{ fill: "var(--map-water)" }} />
         <path
           d="M0 88 C180 90 285 130 385 92 S480 35 570 67"
-          stroke="#c1dce8"
+          style={{ stroke: "var(--map-river)" }}
           strokeWidth="23"
           fill="none"
         />
-        <path d="M625 0L592 270" stroke="#b8ced6" strokeWidth="2" />
-        <rect x="451" y="144" width="77" height="97" rx="11" fill="#cee0c6" />
+        <path d="M625 0L592 270" style={{ stroke: "var(--map-river)" }} strokeWidth="2" />
+        <rect x="451" y="144" width="77" height="97" rx="11" style={{ fill: "var(--map-park)" }} />
         <path
           d="M300 0V270M120 0V270M0 179H580"
-          stroke="#fff"
+          style={{ stroke: "var(--surface)" }}
           strokeWidth="6"
         />
         <polyline
@@ -46,7 +46,7 @@ export default function RouteMap({
             .map((p) => `${p.x * 7},${p.y * 2.7}`)
             .join(" ")}
           fill="none"
-          stroke="#2157d5"
+          style={{ stroke: "var(--brand)" }}
           strokeWidth="3"
           strokeDasharray="6 5"
           strokeLinejoin="round"

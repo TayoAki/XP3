@@ -31,12 +31,10 @@ export default function Inbox({
   state,
   onChange,
   onOpen,
-  onSource,
 }: {
   state: State;
   onChange: (s: State) => void;
   onOpen: (id: string) => void;
-  onSource: (id: string) => void;
 }) {
   const [sourceId, setSourceId] = useState("");
   const [attachment, setAttachment] = useState("");
@@ -104,7 +102,7 @@ export default function Inbox({
           )}
           {threads.map((c) => (
             <button
-              className="button"
+              className="btn btn-secondary btn-md"
               key={c.id}
               onClick={() =>
                 onChange({
@@ -131,7 +129,7 @@ export default function Inbox({
             </button>
           ))}
           <button
-            className="button"
+            className="btn btn-secondary btn-md"
             disabled={
               state.messagePrivacy === "nobody" ||
               threads.some((c) => c.id === "leo")
@@ -192,7 +190,7 @@ export default function Inbox({
                     Accept request
                   </button>
                   <button
-                    className="button"
+                    className="btn btn-secondary btn-md"
                     onClick={() =>
                       update({ status: "declined", unread: false })
                     }
@@ -203,14 +201,14 @@ export default function Inbox({
               )}
               {current.status === "outgoing" && current.messages.length > 0 && (
                 <button
-                  className="button"
+                  className="btn btn-secondary btn-md"
                   onClick={() => update({ status: "accepted" })}
                 >
                   Preview recipient acceptance
                 </button>
               )}
               <button
-                className="button"
+                className="btn btn-secondary btn-md"
                 onClick={() =>
                   onChange({
                     ...state,
@@ -229,7 +227,7 @@ export default function Inbox({
                 <div className="member-evidence">
                   <p>Create a local demo report? No report is sent.</p>
                   <button
-                    className="button"
+                    className="btn btn-secondary btn-md"
                     onClick={() => {
                       onChange({
                         ...state,
@@ -318,7 +316,7 @@ export default function Inbox({
                     </small>
                     {m.failed && (
                       <button
-                        className="button"
+                        className="btn btn-secondary btn-md"
                         disabled={state.offline || blocked}
                         onClick={() =>
                           update({

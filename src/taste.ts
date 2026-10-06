@@ -1,4 +1,4 @@
-import { places, type State, type Place } from "./model";
+import { places, type State, type Place } from "./model.ts";
 export const dimensions = [
   "Easy pace",
   "Local food",

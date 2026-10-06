@@ -52,7 +52,7 @@ import HomeDashboard from "./components/HomeDashboard";
 import Pages from "./components/Pages";
 import DetailPanel from "./components/DetailPanel";
 import Dialog from "./components/Dialog";
-import { Calibration, Ideas, ReturnHub } from "./components/JourneyHub";
+import { Calibration } from "./components/JourneyHub";
 import TasteSetup from "./components/TasteSetup";
 import SwapPanel, { slotName } from "./components/SwapPanel";
 const STORAGE = "xpmatch-journey-preview-v1";
@@ -913,7 +913,6 @@ export default function App() {
         "export",
         "history",
         "trip-options",
-        "replan",
       ].includes(name) &&
       !trip
     ) {
@@ -960,7 +959,6 @@ export default function App() {
     "delete-review": "Remove your demo review?",
     report: "Help keep reviews useful.",
     profile: "A fellow curious wanderer.",
-    replan: "A little change, a better day.",
     "edit-brief": "Your trip starts here.",
     "taste-setup": "A little more you.",
     privacy: "Your taste. Your choice.",
@@ -971,8 +969,6 @@ export default function App() {
     "moderate-sample": "Review the report.",
     recovery: "Find your way back.",
     calibrate: "Teach us your taste.",
-    ideas: "Good ideas don’t need dates.",
-    "return-hub": "Welcome back. Where next?",
     connection: "Your plan, kept safe.",
   };
   return (
@@ -1166,7 +1162,6 @@ export default function App() {
             state={state}
             onChange={setState}
             onOpen={setSelected}
-            onSource={() => go("discover")}
           />
         ) : page === "ideas" ? (
           <PlanningWorkspace
@@ -1500,35 +1495,6 @@ export default function App() {
           )}
           {modalName === "calibrate" && (
             <Calibration state={state} onChange={setState} />
-          )}
-          {modalName === "ideas" && (
-            <Ideas
-              state={state}
-              onChange={setState}
-              onOpen={(id) => {
-                closeModal();
-                setSelected(id);
-              }}
-              onPlan={(b) => {
-                setState((s) => ({ ...s, activeId: null }));
-                setBrief(b);
-                closeModal();
-                go("plan");
-              }}
-            />
-          )}
-          {modalName === "return-hub" && (
-            <ReturnHub
-              state={state}
-              onAction={(n, id) => {
-                closeModal();
-                if (n === "stays" && !trip) {
-                  setToast("Resume a trip first to compare its stays.");
-                  return;
-                }
-                action(n, id);
-              }}
-            />
           )}
           {modalName === "connection" && (
             <RecoveryPanel
@@ -2283,93 +2249,6 @@ export default function App() {
               >
                 Follow demo traveler <Plus size={16} />
               </button>
-            </>
-          )}
-          {modalName === "replan" && (
-            <>
-              <div className="evidence-box">
-                <strong>Confirmed brief stays in place</strong>
-                <p>
-                  {trip!.days.length} days · {trip!.brief.travelers} travelers ·{" "}
-                  {trip!.brief.pace} · ${trip!.brief.budget}/night · no flights
-                </p>
-              </div>
-              <p className="dialog-description">
-                {modal.id === "alternative"
-                  ? "Here’s a sample alternative for your first afternoon. Review it before changing the plan; your dates, party, stay and budget remain the same."
-                  : modal.id === "rain"
-                    ? "Replace the outdoor park stop with an indoor cultural stop."
-                    : "Remove the last stop from Day 1 and leave a little room to wander."}
-              </p>
-              <div className="change-preview">
-                <span>BEFORE</span>
-                <strong>
-                  {
-                    getPlace(
-                      trip!.days[0].places[
-                        modal.id === "alternative"
-                          ? 1
-                          : modal.id === "rain"
-                            ? 0
-                            : trip!.days[0].places.length - 1
-                      ] || "bean",
-                    ).name
-                  }
-                </strong>
-                <ArrowRight size={19} />
-                <span>AFTER</span>
-                <strong>
-                  {modal.id === "rain" || modal.id === "alternative"
-                    ? "Chicago Cultural Center"
-                    : "Free time · saved for later"}
-                </strong>
-              </div>
-              <p className="fine-print">
-                Existing reservations are preserved. Review travel times before
-                traveling.
-              </p>
-              <div className="dialog-actions">
-                <button className="button secondary" onClick={closeModal}>
-                  Keep current plan
-                </button>
-                <button
-                  className="button primary"
-                  onClick={() => {
-                    const removed =
-                      modal.id === "alternative"
-                        ? trip!.days[0].places[
-                            Math.min(1, trip!.days[0].places.length - 1)
-                          ]
-                        : modal.id === "rain"
-                          ? trip!.days[0].places[0]
-                          : trip!.days[0].places.at(-1);
-                    changeTrip(
-                      "Replan applied. Your itinerary and map are updated.",
-                      (t) => {
-                        if (modal.id === "rain" || modal.id === "alternative")
-                          t.days[0].places[
-                            modal.id === "alternative"
-                              ? Math.min(1, t.days[0].places.length - 1)
-                              : 0
-                          ] = "cultural";
-                        else t.days[0].places.pop();
-                        t.messages.push({
-                          role: "assistant",
-                          text: "Done. I’ve updated your first day. You can undo the change or explore the new plan.",
-                        });
-                      },
-                    );
-                    if (removed)
-                      setState((s) => ({
-                        ...s,
-                        saved: [...new Set([...s.saved, removed])],
-                      }));
-                    closeModal();
-                  }}
-                >
-                  Apply change <Check size={16} />
-                </button>
-              </div>
             </>
           )}
           {modalName === "stays" && (

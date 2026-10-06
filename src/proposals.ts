@@ -1,4 +1,4 @@
-import { type Trip, getPlace } from "./model";
+import { type Trip, getPlace } from "./model.ts";
 export type EditProposal = {
   tripId: string;
   revision: number;

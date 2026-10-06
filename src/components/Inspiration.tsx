@@ -70,7 +70,7 @@ export default function Inspiration({
           Explore the advice behind a trip, then make a reviewed personal copy.
         </p>
       </header>
-      <div className="inspiration-grid">
+      <div className="itinerary-grid">
         {trips.map((t) => (
           <article className="inspiration-card" key={t.id}>
             <img
@@ -89,7 +89,7 @@ export default function Inspiration({
               </button>
               <p>{t.summary}</p>
               <button
-                className="button"
+                className="btn btn-secondary btn-md"
                 aria-pressed={!!state.savedItineraries?.includes(t.id)}
                 onClick={() =>
                   onChange({
@@ -163,7 +163,7 @@ export default function Inspiration({
           </ol>
           <p>{source.caveat}</p>
           <button
-            className="button"
+            className="btn btn-secondary btn-md"
             onClick={() => {
               action("inspiration-ideas", source.id);
               setSelected(null);
