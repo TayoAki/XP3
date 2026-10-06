@@ -51,8 +51,7 @@ import {
 import { tasteMatch } from "./taste";
 import Planner from "./components/Planner";
 import RecoveryPanel from "./components/RecoveryPanel";
-import ProposalReview from "./components/ProposalReview";
-import { proposalFor, applyProposals, type EditProposal } from "./proposals";
+import { proposalFor, type EditProposal } from "./proposals";
 import PlanningWorkspace from "./components/PlanningWorkspace";
 import HomeDashboard from "./components/HomeDashboard";
 import Pages from "./components/Pages";
@@ -60,7 +59,7 @@ import DetailPanel from "./components/DetailPanel";
 import Dialog from "./components/Dialog";
 import { Calibration, Ideas, ReturnHub } from "./components/JourneyHub";
 import TasteSetup from "./components/TasteSetup";
-import SwapPanel from "./components/SwapPanel";
+import SwapPanel, { slotName } from "./components/SwapPanel";
 const STORAGE = "xpmatch-journey-preview-v1";
 const navigation: [Page, string, typeof Map][] = [
   ["home", "Home", Compass],
@@ -175,15 +174,20 @@ export default function App() {
     };
   });
   const [page, setPage] = useState<Page>(currentPage);
-  // Activity being swapped ("dayId:index") and the one just swapped in.
+  // Activity being swapped ("dayId:index"), a chosen place being placed into
+  // the trip, and the slots just changed (comma-separated, for a highlight).
   const [swapping, setSwapping] = useState<string | null>(null);
+  const [placing, setPlacing] = useState<string | null>(null);
   const [swapped, setSwapped] = useState<string | null>(null);
   useEffect(() => {
     if (!swapped) return;
     const t = setTimeout(() => setSwapped(null), 1800);
     return () => clearTimeout(t);
   }, [swapped]);
-  useEffect(() => setSwapping(null), [state.activeId]);
+  useEffect(() => {
+    setSwapping(null);
+    setPlacing(null);
+  }, [state.activeId]);
   const [selected, setSelected] = useState<string | null>(() =>
     currentPage() === "plan"
       ? state.viewContext?.[state.activeId || ""]?.place || null
@@ -316,6 +320,7 @@ export default function App() {
     setPage(next);
     setSelected(null);
     setSwapping(null);
+    setPlacing(null);
     setMobileMenu(false);
   }
   function save(id: string) {
@@ -369,6 +374,62 @@ export default function App() {
     setHistory((h) => h.slice(0, -1));
     setToast("Previous trip version restored.");
   }
+  function openSwap(slot: string) {
+    setSelected(null);
+    setPlacing(null);
+    setSwapping(slot);
+  }
+  // Places that leave the trip are kept in the first ideas collection.
+  function keepAsIdea(id: string) {
+    setState((s) => ({
+      ...s,
+      collections: s.collections?.map((c, i) =>
+        i === 0 && !c.placeIds.includes(id)
+          ? { ...c, placeIds: [...c.placeIds, id] }
+          : c,
+      ),
+    }));
+  }
+  // The one path every swap takes: replace a slot, trade two slots, or leave
+  // a slot free (placeId null).
+  function applySwap(dayId: string, index: number, placeId: string | null) {
+    if (!trip) return;
+    const from = getPlace(trip.days.find((d) => d.id === dayId)!.places[index]);
+    const to = placeId ? getPlace(placeId) : null;
+    const there = placeId
+      ? trip.days.find((d) => d.places.includes(placeId))
+      : undefined;
+    const otherIndex = there ? there.places.indexOf(placeId!) : -1;
+    changeTrip(
+      !to
+        ? `${slotName(index)} freed up. ${from.name} is kept in your ideas.`
+        : there
+          ? `Traded ${from.name} and ${to.name}.`
+          : `Swapped ${from.name} for ${to.name}. ${from.name} is kept in your ideas.`,
+      (t) => {
+        const day = t.days.find((d) => d.id === dayId)!;
+        if (!placeId) day.places.splice(index, 1);
+        else {
+          if (there)
+            t.days.find((d) => d.id === there.id)!.places[otherIndex] = from.id;
+          day.places[index] = placeId;
+        }
+      },
+    );
+    if (!there) keepAsIdea(from.id);
+    setScope(null);
+    // Any applied change makes pending suggestions for this trip stale.
+    setProposals((ps) => ps.filter((p) => p.tripId !== trip.id));
+    setSwapping(null);
+    setPlacing(null);
+    if (placeId)
+      setSwapped(
+        there
+          ? `${dayId}:${index},${there.id}:${otherIndex}`
+          : `${dayId}:${index}`,
+      );
+    if (page !== "plan") go("plan");
+  }
   function submit(text: string) {
     if (expired || state.offline) {
       setToast(
@@ -396,10 +457,8 @@ export default function App() {
     const dayId = scope?.split(":")[0] || explicitDay?.id;
     if (!dayId) {
       setToast(
-        "Choose a day or use Ask AI on an activity. Your message is retained.",
+        "Choose Swap on the activity you want to change, or name a day. Your message is kept.",
       );
-      setModal({ name: "proposal" });
-      setProposals([]);
       return false;
     }
     const index = scope
@@ -423,10 +482,9 @@ export default function App() {
       );
     if (!supported) {
       setToast(
-        "This preview needs an explicit swap, weather or pace request. Refine the retained message or select a change.",
+        "This preview understands swap, weather and pace requests. Your message is kept; pick an option in the panel instead.",
       );
-      setModal({ name: "proposal" });
-      setProposals([]);
+      openSwap(`${dayId}:${index}`);
       return false;
     }
     const proposed = proposalFor(
@@ -450,16 +508,15 @@ export default function App() {
                 { role: "user" as const, text },
                 {
                   role: "assistant" as const,
-                  text: "I’ve prepared a specific change. Review the activity, tradeoffs and confirmed brief before applying.",
+                  text: "I’ve put a suggestion at the top of the swap panel, next to the other options for that slot.",
                 },
               ],
             }
           : t,
       ),
     }));
-    setState((s) => ({ ...s, proposalSelection: [0] }));
     setProposals([proposed]);
-    setModal({ name: "proposal" });
+    openSwap(`${dayId}:${index}`);
     return true;
   }
   function generate() {
@@ -666,8 +723,8 @@ export default function App() {
         action("sample");
         return;
       }
-      setSelected(null);
-      setSwapping(id || null);
+      if (id) openSwap(id);
+      else setSwapping(null);
       return;
     }
     if (name === "ask-place") {
@@ -680,7 +737,8 @@ export default function App() {
       return;
     }
     if (name === "review-proposal") {
-      setModal({ name: "proposal" });
+      const pending = proposals.find((p) => p.tripId === trip?.id);
+      if (pending) openSwap(`${pending.dayId}:${pending.index}`);
       return;
     }
     if (name === "restore-access") {
@@ -891,7 +949,6 @@ export default function App() {
   const titles: Record<string, string> = {
     "choose-stay": "Confirm your trip’s base.",
     "choose-activity": "Choose where this alternative belongs.",
-    proposal: "Review exactly what changes.",
     account: "A little more personal.",
     add: "Make room for a good find.",
     "add-day": "Find your next stop.",
@@ -925,7 +982,7 @@ export default function App() {
   };
   return (
     <div
-      className={`app-shell ${selected || (swapping && page === "plan") ? "with-detail" : ""}`}
+      className={`app-shell ${selected || (swapping && page === "plan") || placing ? "with-detail" : ""}`}
     >
       <a href="#main-content" className="skip-link">
         Skip to main content
@@ -1152,6 +1209,7 @@ export default function App() {
             onGenerate={generate}
             onOpen={(id) => {
               setSwapping(null);
+              setPlacing(null);
               setSelected(id);
             }}
             onSave={save}
@@ -1170,45 +1228,64 @@ export default function App() {
           />
         )}
       </main>
-      {swapping && trip && page === "plan" ? (
+      {trip && ((swapping && page === "plan") || placing) ? (
         <SwapPanel
-          key={swapping}
+          key={swapping || placing!}
           trip={trip}
-          dayId={swapping.split(":")[0]}
-          index={Number(swapping.split(":")[1])}
+          target={
+            swapping && page === "plan"
+              ? {
+                  kind: "slot",
+                  dayId: swapping.split(":")[0],
+                  index: Number(swapping.split(":")[1]),
+                }
+              : { kind: "place", placeId: placing! }
+          }
           state={state}
-          onClose={() => setSwapping(null)}
+          suggestion={
+            swapping
+              ? proposals.find(
+                  (p) =>
+                    p.tripId === trip.id &&
+                    `${p.dayId}:${p.index}` === swapping,
+                )
+              : undefined
+          }
+          onSwap={applySwap}
+          onAdd={(dayId, placeId) => {
+            changeTrip(`${getPlace(placeId).name} added to your trip.`, (t) => {
+              t.days.find((d) => d.id === dayId)!.places.push(placeId);
+            });
+            const day = trip.days.find((d) => d.id === dayId)!;
+            setPlacing(null);
+            setSwapped(`${dayId}:${day.places.length}`);
+            if (page !== "plan") go("plan");
+          }}
+          onDismissSuggestion={() =>
+            setProposals((ps) =>
+              ps.filter(
+                (p) =>
+                  !(
+                    p.tripId === trip.id && `${p.dayId}:${p.index}` === swapping
+                  ),
+              ),
+            )
+          }
           onAsk={() => {
-            action("ask-place", swapping);
+            action("ask-place", swapping!);
             setSwapping(null);
           }}
-          onSwap={(placeId) => {
-            const [dayId, index] = swapping.split(":");
-            const from = getPlace(
-              trip.days.find((d) => d.id === dayId)!.places[Number(index)],
-            );
-            const to = getPlace(placeId);
-            const there = trip.days.find((d) => d.places.includes(placeId));
-            changeTrip(
-              there
-                ? `Traded ${from.name} and ${to.name}.`
-                : `Swapped ${from.name} for ${to.name}.`,
-              (t) => {
-                const day = t.days.find((d) => d.id === dayId)!;
-                if (there) {
-                  const other = t.days.find((d) => d.id === there.id)!;
-                  other.places[other.places.indexOf(placeId)] = from.id;
+          onBack={
+            placing
+              ? () => {
+                  setSelected(placing);
+                  setPlacing(null);
                 }
-                day.places[Number(index)] = placeId;
-              },
-            );
+              : undefined
+          }
+          onClose={() => {
             setSwapping(null);
-            // Flash both cards when two slots trade places.
-            setSwapped(
-              there
-                ? `${swapping},${there.id}:${there.places.indexOf(placeId)}`
-                : swapping,
-            );
+            setPlacing(null);
           }}
         />
       ) : selected ? (
@@ -1254,6 +1331,10 @@ export default function App() {
           onChoose={(id) => {
             if (getPlace(id).kind === "stay") {
               setModal({ name: "choose-stay", id });
+            } else if (trip) {
+              setSelected(null);
+              setSwapping(null);
+              setPlacing(id);
             } else setModal({ name: "choose-activity", id });
           }}
           state={state}
@@ -1404,28 +1485,6 @@ export default function App() {
               )}
             </>
           )}
-          {modalName === "choose-activity" && trip && (
-            <ProposalReview
-              trip={trip}
-              initial={[]}
-              defaultAfter={modal.id}
-              onCancel={closeModal}
-              onApply={(edits) => {
-                try {
-                  const next = applyProposals(trip, edits);
-                  changeTrip(
-                    "Alternative selected. Undo is available.",
-                    (t) => {
-                      t.days = next.days;
-                    },
-                  );
-                  closeModal();
-                } catch (e) {
-                  setToast((e as Error).message);
-                }
-              }}
-            />
-          )}
           {modalName === "choose-activity" && !trip && (
             <>
               <p>
@@ -1441,49 +1500,6 @@ export default function App() {
                 Save place
               </button>
             </>
-          )}
-          {modalName === "proposal" && trip && (
-            <ProposalReview
-              trip={trip}
-              initial={proposals.filter((p) => p.tripId === trip.id)}
-              initialSelection={state.proposalSelection}
-              onUpdate={(edits, selection) => {
-                setProposals(edits);
-                setState((s) => ({ ...s, proposalSelection: selection }));
-              }}
-              onCancel={closeModal}
-              onApply={(edits) => {
-                try {
-                  const next = applyProposals(trip, edits);
-                  changeTrip(
-                    "Selected changes applied. Undo is available.",
-                    (t) => {
-                      t.days = next.days;
-                    },
-                  );
-                  setState((s) => ({
-                    ...s,
-                    collections: s.collections?.map((c, i) =>
-                      i === 0
-                        ? {
-                            ...c,
-                            placeIds: [
-                              ...new Set([
-                                ...c.placeIds,
-                                ...edits.map((p) => p.before),
-                              ]),
-                            ],
-                          }
-                        : c,
-                    ),
-                  }));
-                  setProposals([]);
-                  closeModal();
-                } catch (e) {
-                  setToast((e as Error).message);
-                }
-              }}
-            />
           )}
           {modalName === "calibrate" && (
             <Calibration state={state} onChange={setState} />

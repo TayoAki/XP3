@@ -168,7 +168,7 @@ export default function Planner({
           className="proposal-reminder"
           onClick={() => action("review-proposal")}
         >
-          Review pending changes
+          See the suggested change
         </button>
       )}
       <header className="workspace-header">
