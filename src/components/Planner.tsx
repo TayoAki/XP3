@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   Compass,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   cityImage,
@@ -62,7 +63,11 @@ export default function Planner({
   guideDismissed,
   tasteSetupDone,
   onDismissGuide,
+  swapping,
+  swapped,
 }: {
+  swapping: string | null;
+  swapped: string | null;
   savedLocally: boolean;
   guideDismissed: boolean;
   tasteSetupDone: boolean;
@@ -554,7 +559,12 @@ export default function Planner({
                                 };
                                 return (
                                   <article
-                                    className="activity"
+                                    className={`activity${swapping === `${d.id}:${j}` ? " is-swapping" : ""}${swapped?.split(",").includes(`${d.id}:${j}`) ? " is-swapped" : ""}`}
+                                    aria-current={
+                                      swapping === `${d.id}:${j}`
+                                        ? "true"
+                                        : undefined
+                                    }
                                     key={`${id}-${j}`}
                                     draggable
                                     onDragStart={(e) =>
@@ -590,19 +600,39 @@ export default function Planner({
                                             ? "Afternoon"
                                             : "Evening"}
                                       </span>
-                                      <button
-                                        className="icon-button"
-                                        onClick={() =>
-                                          setMenu(
-                                            menu === `${d.id}:${j}`
-                                              ? null
-                                              : `${d.id}:${j}`,
-                                          )
-                                        }
-                                        aria-label={`Edit ${p.name}`}
-                                      >
-                                        <MoreHorizontal size={16} />
-                                      </button>
+                                      <div className="activity-tools">
+                                        <button
+                                          className="activity-swap"
+                                          aria-pressed={
+                                            swapping === `${d.id}:${j}`
+                                          }
+                                          onClick={() => {
+                                            setMenu(null);
+                                            action(
+                                              "swap",
+                                              swapping === `${d.id}:${j}`
+                                                ? ""
+                                                : `${d.id}:${j}`,
+                                            );
+                                          }}
+                                          aria-label={`Swap ${p.name}`}
+                                        >
+                                          <ArrowLeftRight size={14} /> Swap
+                                        </button>
+                                        <button
+                                          className="icon-button"
+                                          onClick={() =>
+                                            setMenu(
+                                              menu === `${d.id}:${j}`
+                                                ? null
+                                                : `${d.id}:${j}`,
+                                            )
+                                          }
+                                          aria-label={`Edit ${p.name}`}
+                                        >
+                                          <MoreHorizontal size={16} />
+                                        </button>
+                                      </div>
                                     </div>
                                     <button
                                       className="activity-content"
@@ -671,7 +701,8 @@ export default function Planner({
                                             setMenu(null);
                                           }}
                                         >
-                                          Find an alternative
+                                          <ArrowLeftRight size={14} /> Swap for
+                                          something else
                                         </button>
                                         <button
                                           onClick={() => {

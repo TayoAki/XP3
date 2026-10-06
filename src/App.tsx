@@ -60,6 +60,7 @@ import DetailPanel from "./components/DetailPanel";
 import Dialog from "./components/Dialog";
 import { Calibration, Ideas, ReturnHub } from "./components/JourneyHub";
 import TasteSetup from "./components/TasteSetup";
+import SwapPanel from "./components/SwapPanel";
 const STORAGE = "xpmatch-journey-preview-v1";
 const navigation: [Page, string, typeof Map][] = [
   ["home", "Home", Compass],
@@ -174,6 +175,15 @@ export default function App() {
     };
   });
   const [page, setPage] = useState<Page>(currentPage);
+  // Activity being swapped ("dayId:index") and the one just swapped in.
+  const [swapping, setSwapping] = useState<string | null>(null);
+  const [swapped, setSwapped] = useState<string | null>(null);
+  useEffect(() => {
+    if (!swapped) return;
+    const t = setTimeout(() => setSwapped(null), 1800);
+    return () => clearTimeout(t);
+  }, [swapped]);
+  useEffect(() => setSwapping(null), [state.activeId]);
   const [selected, setSelected] = useState<string | null>(() =>
     currentPage() === "plan"
       ? state.viewContext?.[state.activeId || ""]?.place || null
@@ -305,6 +315,7 @@ export default function App() {
     location.hash = next;
     setPage(next);
     setSelected(null);
+    setSwapping(null);
     setMobileMenu(false);
   }
   function save(id: string) {
@@ -649,6 +660,16 @@ export default function App() {
       );
       return;
     }
+    if (name === "swap") {
+      if (!trip) {
+        setToast("Start a sample trip to try this part of the journey.");
+        action("sample");
+        return;
+      }
+      setSelected(null);
+      setSwapping(id || null);
+      return;
+    }
     if (name === "ask-place") {
       setScope(id || null);
       setToast("Chat scoped to this activity. Describe the change below.");
@@ -832,7 +853,6 @@ export default function App() {
         "add",
         "add-day",
         "move",
-        "swap",
         "today",
         "bookings",
         "share",
@@ -876,7 +896,6 @@ export default function App() {
     add: "Make room for a good find.",
     "add-day": "Find your next stop.",
     move: "Give it a new place in your day.",
-    swap: "A different kind of good.",
     stays: "A good base changes everything.",
     share: "Better together.",
     history: "Your trip, as it evolves.",
@@ -905,7 +924,9 @@ export default function App() {
     connection: "Your plan, kept safe.",
   };
   return (
-    <div className={`app-shell ${selected ? "with-detail" : ""}`}>
+    <div
+      className={`app-shell ${selected || (swapping && page === "plan") ? "with-detail" : ""}`}
+    >
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
@@ -1129,9 +1150,14 @@ export default function App() {
             onSubmit={submit}
             onBrief={setBrief}
             onGenerate={generate}
-            onOpen={setSelected}
+            onOpen={(id) => {
+              setSwapping(null);
+              setSelected(id);
+            }}
             onSave={save}
             action={action}
+            swapping={swapping}
+            swapped={swapped}
           />
         ) : (
           <Pages
@@ -1144,7 +1170,48 @@ export default function App() {
           />
         )}
       </main>
-      {selected ? (
+      {swapping && trip && page === "plan" ? (
+        <SwapPanel
+          key={swapping}
+          trip={trip}
+          dayId={swapping.split(":")[0]}
+          index={Number(swapping.split(":")[1])}
+          state={state}
+          onClose={() => setSwapping(null)}
+          onAsk={() => {
+            action("ask-place", swapping);
+            setSwapping(null);
+          }}
+          onSwap={(placeId) => {
+            const [dayId, index] = swapping.split(":");
+            const from = getPlace(
+              trip.days.find((d) => d.id === dayId)!.places[Number(index)],
+            );
+            const to = getPlace(placeId);
+            const there = trip.days.find((d) => d.places.includes(placeId));
+            changeTrip(
+              there
+                ? `Traded ${from.name} and ${to.name}.`
+                : `Swapped ${from.name} for ${to.name}.`,
+              (t) => {
+                const day = t.days.find((d) => d.id === dayId)!;
+                if (there) {
+                  const other = t.days.find((d) => d.id === there.id)!;
+                  other.places[other.places.indexOf(placeId)] = from.id;
+                }
+                day.places[Number(index)] = placeId;
+              },
+            );
+            setSwapping(null);
+            // Flash both cards when two slots trade places.
+            setSwapped(
+              there
+                ? `${swapping},${there.id}:${there.places.indexOf(placeId)}`
+                : swapping,
+            );
+          }}
+        />
+      ) : selected ? (
         <DetailPanel
           key={selected}
           place={{
@@ -1530,8 +1597,7 @@ export default function App() {
           )}
           {(modalName === "add" ||
             modalName === "add-day" ||
-            modalName === "move" ||
-            modalName === "swap") && (
+            modalName === "move") && (
             <form
               onSubmit={form((data) => {
                 const target = String(data.get("day"));
@@ -1543,15 +1609,6 @@ export default function App() {
                     const [item] = source.places.splice(Number(index), 1);
                     t.days.find((d) => d.id === target)!.places.push(item);
                   });
-                } else if (modalName === "swap") {
-                  const [from, index] = modal.id!.split(":");
-                  changeTrip(
-                    "Alternative applied. Your route preview is updated.",
-                    (t) => {
-                      t.days.find((d) => d.id === from)!.places[Number(index)] =
-                        placeId;
-                    },
-                  );
                 } else if (getPlace(placeId)?.kind === "stay") {
                   changeTrip("Stay selected for your trip.", (t) => {
                     t.stayId = placeId;
@@ -1598,8 +1655,7 @@ export default function App() {
                   Move the activity without losing its place details.
                 </p>
               )}
-              {modalName !== "swap" &&
-                getPlace(modal.id || "")?.kind !== "stay" &&
+              {getPlace(modal.id || "")?.kind !== "stay" &&
                 selectDay(modalName === "add-day" ? modal.id : undefined)}
               <p className="fine-print">
                 Your itinerary and route preview update together. You can undo
@@ -1614,9 +1670,7 @@ export default function App() {
                   Cancel
                 </button>
                 <button className="button primary">
-                  {modalName === "swap"
-                    ? "Apply alternative"
-                    : "Confirm change"}
+                  Confirm change
                   <Check size={16} />
                 </button>
               </div>

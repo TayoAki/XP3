@@ -4649,3 +4649,245 @@ select {
 .connected-workspace[data-view="plan"] .live-member-workspace,.connected-workspace[data-view="trips"] .live-member-workspace,.connected-workspace[data-view="taste"] .live-member-workspace {display:none;}
 .connected-workspace[data-view="saved"] .inbox-layout,.connected-workspace[data-view="saved"] .live-member-workspace {display:none;}
 .live-comparison {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:16px;}
+
+/* Swap: inline alternatives in the right panel */
+.activity-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.activity-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  position: relative;
+}
+.activity-swap::after {
+  /* Expands the hit area to 40px without growing the card. */
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+.activity-swap:hover,
+.activity-swap[aria-pressed="true"] {
+  background: var(--blue-soft);
+}
+.activity-top .icon-button {
+  min-height: 32px;
+  min-width: 32px;
+}
+.activity.is-swapping {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #2157d526;
+}
+.activity.is-swapped {
+  animation: swap-in 1.8s ease-out;
+}
+@keyframes swap-in {
+  0% {
+    background: #dfe9ff;
+    border-color: var(--blue);
+    transform: scale(0.97);
+  }
+  15% {
+    transform: scale(1);
+  }
+  55% {
+    background: #dfe9ff;
+    border-color: var(--blue);
+  }
+  100% {
+    background: #fff;
+  }
+}
+.swap-slot {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.swap-panel h2:focus {
+  outline: none;
+}
+.swap-body {
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f1f4f8;
+  border-radius: 10px;
+}
+.segmented button {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  padding: 0 8px;
+  min-height: 36px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5b74;
+}
+.segmented button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px #1d2e4520;
+}
+.swap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.swap-option {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+.swap-option:hover {
+  border-color: #c7d5f1;
+}
+.swap-option-main {
+  display: flex;
+  gap: 12px;
+}
+.swap-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #dce5f0;
+  flex-shrink: 0;
+}
+.swap-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.swap-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.swap-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.swap-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.swap-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swap-reasons li {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-dark);
+}
+.swap-detail p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #425571;
+}
+.swap-area {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.swap-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.button.ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #425571;
+}
+.button.ghost:hover {
+  background: #f1f4f8;
+}
+.flip {
+  transform: rotate(180deg);
+}
+.swap-empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+.swap-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--blue);
+  text-align: left;
+}
+.swap-ask:hover {
+  background: var(--blue-soft);
+}
+@media (max-width: 760px) {
+  .swap-actions .button {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .activity.is-swapped {
+    animation: none;
+    background: #eef3ff;
+  }
+}
+.swap-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.swap-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.swap-group-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -8px;
+}
+.swap-where {
+  font-size: 12px;
+  color: #8a5a00;
+  margin-top: 4px;
+}
