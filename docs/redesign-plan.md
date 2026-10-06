@@ -1,5 +1,7 @@
 # XPMatch redesign plan
 
+> **Superseded** by [xpmatch-plan.md](xpmatch-plan.md) (Oct 6, 2026). Kept for history.
+
 Status: **proposal, awaiting confirmation**. No UI code has changed yet.
 
 Inputs:
