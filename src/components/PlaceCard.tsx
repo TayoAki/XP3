@@ -1,13 +1,6 @@
-import { MemberEvidence } from "./Inspiration";
-import {
-  ArrowUpRight,
-  Bookmark,
-  Check,
-  MapPin,
-  Star,
-  BedDouble,
-} from "lucide-react";
+import { Bookmark, BookmarkCheck, MapPin, Star, Sparkles } from "lucide-react";
 import type { Place } from "../model";
+
 export function Photo({
   place,
   className = "",
@@ -19,84 +12,67 @@ export function Photo({
     <img
       className={className}
       src={place.image}
-      alt={`${place.name} — illustrative travel photography`}
+      alt=""
       loading="lazy"
       onError={(e) => {
-        e.currentTarget.style.display = "none";
+        e.currentTarget.style.visibility = "hidden";
         e.currentTarget.parentElement?.classList.add("image-fallback");
       }}
     />
   );
 }
+
+/** A place in a grid: photo, fit, name and one line of why. Opens the side panel. */
 export function PlaceCard({
   place,
+  fit,
+  why,
   saved,
   onSave,
   onOpen,
-  compact = false,
-  nights = 2,
 }: {
   place: Place;
+  fit: number;
+  why?: string;
   saved: boolean;
   onSave: () => void;
   onOpen: () => void;
-  compact?: boolean;
-  nights?: number;
 }) {
   return (
-    <article className={`place-card ${compact ? "compact" : ""}`}>
-      <div className="card-image">
+    <article className="place-card">
+      <div className="place-card-media">
         <button
-          className="image-open"
+          className="place-card-photo"
           onClick={onOpen}
-          aria-label={`Explore ${place.name}`}
+          tabIndex={-1}
+          aria-hidden="true"
         >
           <Photo place={place} />
         </button>
-        <span className="fit-badge">
-          <span /> {place.fit}/100 demo fit
+        <span className="fit-pill">
+          <Sparkles size={13} /> {fit}/100 fit
         </span>
         <button
-          className={`save-button ${saved ? "saved" : ""}`}
+          className="save-toggle"
           onClick={onSave}
-          aria-label={`${saved ? "Unsave" : "Save"} ${place.name}`}
+          aria-pressed={saved}
+          aria-label={`${saved ? "Remove" : "Save"} ${place.name}`}
         >
-          {saved ? <Check size={16} /> : <Bookmark size={16} />}
+          {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
         </button>
       </div>
-      <div className="card-content">
-        <div className="eyebrow">
-          {place.kind === "stay" ? (
-            <BedDouble size={13} />
-          ) : (
-            <MapPin size={13} />
-          )}{" "}
-          {place.area}
-        </div>
-        <button className="card-title" onClick={onOpen}>
+      <div className="place-card-body">
+        <button className="place-card-name" onClick={onOpen}>
           {place.name}
-          <ArrowUpRight size={16} />
         </button>
-        <div className="card-meta">
-          <span>
-            <Star size={13} fill="currentColor" /> {place.rating.toFixed(1)}{" "}
-            <small>({place.reviews.toLocaleString()})</small>
-          </span>
-          <span>{place.price}</span>
-        </div>
-        {!compact && <p>{place.why}</p>}
-        {!compact && <MemberEvidence placeId={place.id} />}
-        {place.kind === "stay" && (
-          <div className="hotel-foot">
-            <span>{nights} nights · estimated total</span>
-            <strong>
-              $
-              {(
-                nights * (place.id === "hotel-loop" ? 189 : 198)
-              ).toLocaleString()}
-            </strong>
-          </div>
-        )}
+        <p className="place-card-meta">
+          <MapPin size={13} /> {place.area}
+          <span aria-hidden="true">·</span>
+          <Star size={13} /> {place.rating.toFixed(1)}
+          <span aria-hidden="true">·</span>
+          {place.price}
+        </p>
+        {why && <p className="place-card-why">{why}</p>}
       </div>
     </article>
   );

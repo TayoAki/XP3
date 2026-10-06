@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap");
 /* XPMatch design tokens. Every colour, size, radius and shadow in the app
    comes from here; component CSS never uses raw values for these. */
 :root {

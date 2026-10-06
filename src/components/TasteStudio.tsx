@@ -1,609 +1,459 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Search,
   Star,
   Check,
-  ArrowRight,
   Trash2,
-  Heart,
+  ArrowRight,
   ShieldCheck,
+  PenLine,
 } from "lucide-react";
 import { places, type State } from "../model";
 import { dimensions, learnedTaste, rankedTaste, tasteMatch } from "../taste";
+import { Button, Chip, IconButton, Section, Segmented } from "../ui";
 import { Photo } from "./PlaceCard";
+
+const interestOptions = [
+  "Local food",
+  "Architecture",
+  "Art & culture",
+  "Hidden gems",
+  "Nature",
+  "Good value",
+  "Nightlife",
+  "Boutique hotels",
+  "Family friendly",
+  "Wellness",
+  "Small plates",
+];
+const paces = [
+  ["Relaxed", "Relaxed"],
+  ["Balanced", "Balanced"],
+  ["Packed with discovery", "Packed"],
+] as const;
+const kinds = [
+  ["all", "All"],
+  ["food", "Food"],
+  ["experience", "Things to do"],
+  ["stay", "Stays"],
+] as const;
+
+type Draft = { rating: number; liked: string[]; disliked: string[] };
+type Impact = { name: string; before: number; after: number };
+
+/**
+ * The one taste editor: what you choose directly (interests, pace) and what
+ * you teach it by rating places you know. Everything stays on this device.
+ */
 export default function TasteStudio({
   state,
   onChange,
   onOpen,
   onReview,
-  compact = false,
 }: {
   state: State;
   onChange: (s: State) => void;
   onOpen?: (id: string) => void;
   onReview?: (id: string) => void;
-  compact?: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState("all");
+  const [kind, setKind] = useState<(typeof kinds)[number][0]>("all");
   const [selected, setSelected] = useState<string | null>(null);
-  const [rating, setRating] = useState(0);
-  const [liked, setLiked] = useState<string[]>([]);
-  const [disliked, setDisliked] = useState<string[]>([]);
-  const [saved, setSaved] = useState(false);
-  const [removed, setRemoved] = useState<{
-    id: string;
-    signal: NonNullable<State["tasteSignals"]>[string];
-  } | null>(null);
-  const [drafts, setDrafts] = useState<
-    Record<string, { rating: number; liked: string[]; disliked: string[] }>
-  >(() => {
+  const [draft, setDraft] = useState<Draft>({
+    rating: 0,
+    liked: [],
+    disliked: [],
+  });
+  const [drafts, setDrafts] = useState<Record<string, Draft>>(() => {
     try {
       return JSON.parse(localStorage.getItem("xpmatch-taste-drafts") || "{}");
     } catch {
       return {};
     }
   });
-  const [impact, setImpact] = useState<
-    | {
-        name: string;
-        before: number;
-        after: number;
-        oldRank: number;
-        newRank: number;
-        reason: string;
-      }[]
-    | null
-  >(null);
-  const [expanded, setExpanded] = useState(false);
-  const original = selected ? state.tasteSignals?.[selected] : undefined;
-  const dirty =
-    !!selected &&
-    (rating !== (original?.rating || 0) ||
-      JSON.stringify([...liked].sort()) !==
-        JSON.stringify([...(original?.liked || [])].sort()) ||
-      JSON.stringify([...disliked].sort()) !==
-        JSON.stringify([...(original?.disliked || [])].sort()));
-  useEffect(() => {
-    if (!selected) return;
-    setDrafts((d) => {
-      const next = { ...d };
-      if (dirty) next[selected] = { rating, liked, disliked };
-      else delete next[selected];
-      return next;
-    });
-  }, [selected, rating, liked, disliked, dirty]);
+  const [impact, setImpact] = useState<Impact[] | null>(null);
+  const [removed, setRemoved] = useState<{
+    id: string;
+    signal: NonNullable<State["tasteSignals"]>[string];
+  } | null>(null);
   useEffect(() => {
     try {
       localStorage.setItem("xpmatch-taste-drafts", JSON.stringify(drafts));
     } catch {}
   }, [drafts]);
+
   const signals = Object.entries(state.tasteSignals || {}).filter(
     ([, s]) => s.rating > 0,
   );
   const weights = learnedTaste(state);
-  const favorites = Object.keys(weights).filter((t) => weights[t] > 0);
-  const avoid = Object.keys(weights).filter((t) => weights[t] < 0);
-  const matches = rankedTaste(state);
+  const more = Object.keys(weights).filter((t) => weights[t] > 0);
+  const less = Object.keys(weights).filter((t) => weights[t] < 0);
   const place = places.find((p) => p.id === selected);
+  const saved = selected ? state.tasteSignals?.[selected] : undefined;
+  const dirty =
+    !!selected &&
+    (draft.rating !== (saved?.rating || 0) ||
+      [...draft.liked].sort().join() !==
+        [...(saved?.liked || [])].sort().join() ||
+      [...draft.disliked].sort().join() !==
+        [...(saved?.disliked || [])].sort().join());
+
   const pick = (id: string) => {
     const s = drafts[id] || state.tasteSignals?.[id];
     setSelected(id);
-    setRating(s?.rating || 0);
-    setLiked(s?.liked || []);
-    setDisliked(s?.disliked || []);
-    setSaved(false);
+    setDraft({
+      rating: s?.rating || 0,
+      liked: s?.liked || [],
+      disliked: s?.disliked || [],
+    });
+    setImpact(null);
   };
-  const saveFeedback = () => {
-    if (!place || !rating) return;
-    const next = {
+  const edit = (next: Draft) => {
+    setDraft(next);
+    if (selected) setDrafts((d) => ({ ...d, [selected]: next }));
+  };
+  const toggle = (tag: string, good: boolean) =>
+    edit(
+      good
+        ? {
+            ...draft,
+            liked: draft.liked.includes(tag)
+              ? draft.liked.filter((t) => t !== tag)
+              : [...draft.liked, tag],
+            disliked: draft.disliked.filter((t) => t !== tag),
+          }
+        : {
+            ...draft,
+            disliked: draft.disliked.includes(tag)
+              ? draft.disliked.filter((t) => t !== tag)
+              : [...draft.disliked, tag],
+            liked: draft.liked.filter((t) => t !== tag),
+          },
+    );
+  const save = () => {
+    if (!place || !draft.rating) return;
+    const next: State = {
       ...state,
       tasteSignals: {
         ...state.tasteSignals,
-        [place.id]: { rating, reasons: liked, liked, disliked },
+        [place.id]: { ...draft, reasons: draft.liked },
       },
     };
-    const before = rankedTaste(state);
-    const after = rankedTaste(next);
     setImpact(
-      after
-        .map((p, i) => {
-          const old = before.find((x) => x.id === p.id)!;
-          const fit = tasteMatch(p, next);
-          return {
-            name: p.name,
-            before: old.fit,
-            after: p.fit,
-            oldRank: before.findIndex((x) => x.id === p.id) + 1,
-            newRank: i + 1,
-            reason:
-              p.id === place.id
-                ? "Your updated overall rating and matching attributes"
-                : fit.cautions.length
-                  ? `Avoid signal: ${fit.cautions.join(", ")}`
-                  : `Liked signal: ${fit.reasons.join(", ")}`,
-          };
-        })
-        .filter((p) => p.before !== p.after || p.oldRank !== p.newRank)
-        .sort(
-          (a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before),
+      places
+        .map((p) => ({
+          name: p.name,
+          before: tasteMatch(p, state).score,
+          after: tasteMatch(p, next).score,
+          id: p.id,
+        }))
+        .filter((c) => c.before !== c.after)
+        .sort((a, b) =>
+          a.id === place.id
+            ? -1
+            : b.id === place.id
+              ? 1
+              : Math.abs(b.after - b.before) - Math.abs(a.after - a.before),
         )
         .slice(0, 4),
     );
     onChange(next);
     setDrafts((d) => {
-      const next = { ...d };
-      delete next[place.id];
-      return next;
+      const rest = { ...d };
+      delete rest[place.id];
+      return rest;
     });
-    setSaved(true);
   };
   const relevant = place
     ? [
         ...new Set([
           ...place.tags,
           ...(place.kind === "food"
-            ? ["Food quality", "Service", "Value", "Quiet spaces"]
+            ? ["Food quality", "Service", "Value"]
             : []),
           "Easy pace",
+          "Quiet spaces",
+          "Good value",
         ]),
       ].filter((t) => dimensions.includes(t))
     : [];
-  const visibleDimensions = expanded
-    ? dimensions
-    : [...new Set([...relevant, ...liked, ...disliked])];
-  const toggle = (tag: string, positive: boolean) => {
-    setSaved(false);
-    if (positive) {
-      setLiked(
-        liked.includes(tag) ? liked.filter((t) => t !== tag) : [...liked, tag],
-      );
-      setDisliked(disliked.filter((t) => t !== tag));
-    } else {
-      setDisliked(
-        disliked.includes(tag)
-          ? disliked.filter((t) => t !== tag)
-          : [...disliked, tag],
-      );
-      setLiked(liked.filter((t) => t !== tag));
-    }
-  };
+  const list = places.filter(
+    (p) =>
+      (kind === "all" || p.kind === kind) &&
+      p.name.toLowerCase().includes(query.toLowerCase()),
+  );
+  const top = rankedTaste(state).slice(0, 4);
+
   return (
-    <div className={`taste-studio ${compact ? "compact" : ""}`}>
-      <section className="taste-hero">
-        <span className="eyebrow">YOUR TASTE, IN YOUR WORDS</span>
-        <h2>More than a star rating.</h2>
-        <p>
-          Tell us what you loved and what you’d skip. See your priorities shape
-          the recommendations below.
-        </p>
-        <div className="taste-progress">
-          <span>{signals.length} familiar places rated</span>
-          <span>
+    <div className="taste">
+      <div className="taste-main">
+        <Section title="What you choose">
+          <p className="muted-note">
+            Every new trip starts from these. A trip can override them for
+            itself.
+          </p>
+          <div className="chip-row">
+            {[...new Set([...interestOptions, ...state.interests])].map((t) => (
+              <Chip
+                key={t}
+                pressed={state.interests.includes(t)}
+                onClick={() =>
+                  onChange({
+                    ...state,
+                    interests: state.interests.includes(t)
+                      ? state.interests.filter((i) => i !== t)
+                      : [...state.interests, t],
+                  })
+                }
+              >
+                {state.interests.includes(t) && <Check size={14} />} {t}
+              </Chip>
+            ))}
+          </div>
+          <div className="taste-pace">
+            <span>Usual pace</span>
+            <Segmented
+              label="Usual pace"
+              options={paces}
+              value={state.pace as (typeof paces)[number][0]}
+              onChange={(pace) => onChange({ ...state, pace })}
+            />
+          </div>
+        </Section>
+
+        <Section title="Rate places you know">
+          <p className="muted-note">
             {signals.length < 3
-              ? "Getting started · try three places"
-              : signals.length < 6
-                ? "Taking shape · add a different kind of place"
-                : "A richer starting point"}
-          </span>
-        </div>
-        <small>Private on this device · no public review is posted</small>
-      </section>
-      <div className="taste-studio-grid">
-        <div>
-          <section className="settings-card">
-            <div className="section-line">
-              <h3>Start with a place you know</h3>
-              <span className="mini-label">CHICAGO DEMO</span>
-            </div>
-            <div className="taste-search">
-              <Search size={17} />
-              <input
-                aria-label="Search familiar places"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search places you’ve visited…"
-              />
-            </div>
-            <div className="filter-row">
-              {[
-                ["all", "All"],
-                ["food", "Restaurants"],
-                ["experience", "Things to do"],
-                ["stay", "Hotels"],
-              ].map(([id, label]) => (
-                <button
-                  className={kind === id ? "active" : ""}
-                  key={id}
-                  onClick={() => setKind(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="familiar-list">
-              {places
-                .filter(
-                  (p) =>
-                    (kind === "all" || p.kind === kind) &&
-                    p.name.toLowerCase().includes(query.toLowerCase()),
-                )
-                .map((p) => (
+              ? `${signals.length} of 3 rated. A few honest ratings, good and bad, teach more than a long questionnaire.`
+              : `${signals.length} rated. Add a different kind of place to round it out.`}
+          </p>
+          <div className="taste-progress" aria-hidden="true">
+            <span
+              style={{ width: `${Math.min(100, (signals.length / 3) * 100)}%` }}
+            />
+          </div>
+          <div className="search-field">
+            <Search size={18} />
+            <label className="sr-only" htmlFor="taste-search">
+              Find a place you’ve been
+            </label>
+            <input
+              id="taste-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Find a place you’ve been…"
+            />
+          </div>
+          <Segmented
+            label="Kind of place"
+            options={kinds}
+            value={kind}
+            onChange={setKind}
+          />
+          <ul className="familiar-list">
+            {list.map((p) => {
+              const rated = state.tasteSignals?.[p.id]?.rating;
+              return (
+                <li key={p.id}>
                   <button
-                    className={selected === p.id ? "chosen" : ""}
-                    key={p.id}
+                    aria-pressed={selected === p.id}
                     onClick={() => pick(p.id)}
                   >
-                    <Photo place={p} />
-                    <span>
+                    <span className="idea-thumb">
+                      <Photo place={p} />
+                    </span>
+                    <span className="familiar-text">
                       <strong>{p.name}</strong>
                       <small>
                         {drafts[p.id] ? "Draft kept · " : ""}
-                        {p.area} ·{" "}
-                        {state.tasteSignals?.[p.id]?.rating
-                          ? `${state.tasteSignals[p.id].rating}/5 · edit rating`
-                          : "I’ve been here"}
+                        {rated ? `You rated it ${rated}/5` : p.area}
                       </small>
                     </span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={16} />
                   </button>
-                ))}
-            </div>
-            {!places.some(
-              (p) =>
-                (kind === "all" || p.kind === kind) &&
-                p.name.toLowerCase().includes(query.toLowerCase()),
-            ) && (
-              <p className="empty-inline">
-                No sample places found. Try another name or category. More
-                cities will connect with place search.
-              </p>
-            )}
-            {place && (
-              <div className="taste-editor">
-                <h3>How was {place.name}?</h3>
-                {dirty && (
-                  <p className="draft-notice" role="status">
-                    Unsubmitted edits kept on this device. You can switch places
-                    and return; matches change only after Save.
-                  </p>
-                )}
-                {state.tasteSignals?.[place.id] &&
-                  !state.tasteSignals[place.id].liked &&
-                  state.tasteSignals[place.id].reasons.length > 0 && (
-                    <p className="fine-print">
-                      Earlier feedback mentioned{" "}
-                      {state.tasteSignals[place.id].reasons.join(", ")}. Confirm
-                      which details you liked or disliked below.
-                    </p>
-                  )}
-                <div className="rating-picks">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      aria-label={`Rate ${n} stars`}
-                      aria-pressed={rating === n}
-                      key={n}
-                      onClick={() => {
-                        setRating(n);
-                        setSaved(false);
-                      }}
-                    >
-                      <Star fill={rating >= n ? "currentColor" : "none"} />
-                    </button>
-                  ))}
-                </div>
-                <p>
-                  {
-                    [
-                      "Choose your overall rating",
-                      "Would skip next time",
-                      "Not my favorite",
-                      "Mixed experience",
-                      "Would go again",
-                      "A personal favorite",
-                    ][rating]
-                  }
-                </p>
-                <h4>What worked for you?</h4>
-                <div className="interest-options">
-                  {visibleDimensions.map((t) => (
-                    <button
-                      key={t}
-                      aria-label={`Liked ${t}`}
-                      aria-pressed={liked.includes(t)}
-                      className={liked.includes(t) ? "selected" : ""}
-                      onClick={() => toggle(t, true)}
-                    >
-                      {liked.includes(t) && <Check size={12} />} {t}
-                    </button>
-                  ))}
-                </div>
-                <h4>What would you rather avoid?</h4>
-                <div className="interest-options">
-                  {visibleDimensions.map((t) => (
-                    <button
-                      key={t}
-                      aria-label={`Disliked ${t}`}
-                      aria-pressed={disliked.includes(t)}
-                      className={disliked.includes(t) ? "selected" : ""}
-                      onClick={() => toggle(t, false)}
-                    >
-                      {disliked.includes(t) && <Check size={12} />} {t}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="text-button dimension-toggle"
-                  aria-expanded={expanded}
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? "Show relevant qualities" : "Show all qualities"}
-                </button>
-                <p className="fine-print">
-                  Choose what you actually experienced. Leave uncertain details
-                  blank. Likes and dislikes stay separate even when your overall
-                  rating is mixed.
-                </p>
-                <div className="taste-save-bar">
-                  <span>
-                    {dirty ? "Unsaved feedback" : "Feedback up to date"}
-                  </span>
-                  <button
-                    className="button primary"
-                    disabled={!rating || !dirty}
-                    onClick={saveFeedback}
-                  >
-                    Save private feedback <Check size={15} />
-                  </button>
-                  <button
-                    className="button secondary"
-                    disabled={!dirty}
-                    onClick={() => {
-                      const s = state.tasteSignals?.[place.id];
-                      setRating(s?.rating || 0);
-                      setLiked(s?.liked || []);
-                      setDisliked(s?.disliked || []);
-                      setSaved(false);
-                    }}
-                  >
-                    Revert unsaved edits
-                  </button>
-                </div>
-                {onReview && (
-                  <button
-                    className="research-link"
-                    onClick={() => onReview(place.id)}
-                  >
-                    Write a separate public review <ArrowRight size={14} />
-                  </button>
-                )}
-                {saved && (
-                  <p className="taste-saved" role="status">
-                    Saved. Your taste summary and demo order have updated.
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-          <section className="settings-card">
-            <h3>Your saved experiences</h3>
-            {!signals.length && (
-              <p className="empty-inline">
-                Your first rating will appear here. You can edit or remove it
-                anytime.
-              </p>
-            )}
-            {signals.map(([id, s]) => (
-              <div className="signal-row" key={id}>
-                <button onClick={() => pick(id)}>
-                  <strong>{places.find((p) => p.id === id)?.name || id}</strong>
-                  <small>
-                    {s.rating}/5 · {s.liked?.length || 0} likes ·{" "}
-                    {s.disliked?.length || 0} dislikes
-                  </small>
-                </button>
-                <button
-                  aria-label={`Remove taste rating for ${places.find((p) => p.id === id)?.name || id}`}
-                  onClick={() => {
-                    const next = { ...state.tasteSignals };
-                    delete next[id];
-                    setRemoved({ id, signal: s });
-                    onChange({ ...state, tasteSignals: next });
-                    if (selected === id) setSelected(null);
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
-            {removed && (
-              <button
-                className="text-button"
-                onClick={() => {
-                  onChange({
-                    ...state,
-                    tasteSignals: {
-                      ...state.tasteSignals,
-                      [removed.id]: removed.signal,
-                    },
-                  });
-                  setRemoved(null);
-                }}
-              >
-                Undo removed rating
-              </button>
-            )}
-          </section>
-        </div>
-        <aside>
-          <section className="taste-summary">
-            <Heart size={24} />
-            <h3>What you’re teaching us</h3>
-            <span className="eyebrow">
-              PATTERNS FROM YOUR SAVED EXPERIENCES
-            </span>
-            <p className="fine-print">
-              These are tentative patterns from explicit likes and dislikes—not
-              assumptions based on stars alone.
+                </li>
+              );
+            })}
+          </ul>
+          {!list.length && (
+            <p className="muted-note">
+              No sample places match. Try another name.
             </p>
-            <span className="eyebrow">MORE OF</span>
-            <div className="tags">
-              {favorites.length ? (
-                favorites.map((t) => (
-                  <span key={t}>
-                    {t} ·{" "}
-                    {signals.filter(([, s]) => s.liked?.includes(t)).length}{" "}
-                    experiences
-                  </span>
-                ))
-              ) : (
-                <p>No clear likes yet. Add detail to a rating.</p>
-              )}
-            </div>
-            <span className="eyebrow">LESS OF</span>
-            <div className="tags">
-              {avoid.length ? (
-                avoid.map((t) => (
-                  <span key={t}>
-                    {t} ·{" "}
-                    {signals.filter(([, s]) => s.disliked?.includes(t)).length}{" "}
-                    experiences
-                  </span>
-                ))
-              ) : (
-                <p>No clear dislikes yet.</p>
-              )}
-            </div>
-            <p>
-              Conflicting feedback balances out. A single rating is a clue, not
-              a permanent label.
-            </p>
-            <span className="eyebrow">PREFERENCES YOU CHOOSE</span>
-            <p className="fine-print">
-              Direct choices are separate from patterns in your ratings. You can
-              correct either at any time.
-            </p>
-            <label className="field-label">
-              Your starting travel pace
-              <select
-                value={state.pace}
-                onChange={(e) => onChange({ ...state, pace: e.target.value })}
-              >
-                {["Relaxed", "Balanced", "Packed with discovery"].map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
-            </label>
-            <h4>Interests you choose directly</h4>
-            <div className="interest-options">
-              {[
-                ...new Set([
-                  "Local food",
-                  "Architecture",
-                  "Art & culture",
-                  "Hidden gems",
-                  "Nature",
-                  "Good value",
-                  "Nightlife",
-                  "Boutique hotels",
-                  "Family friendly",
-                  "Wellness",
-                  "Small plates",
-                  "Luxury",
-                  ...state.interests,
-                ]),
-              ].map((t) => (
+          )}
+        </Section>
+
+        {place && (
+          <section
+            className="taste-editor"
+            aria-labelledby="taste-editor-title"
+          >
+            <h3 id="taste-editor-title">How was {place.name}?</h3>
+            <div className="star-picker" role="group" aria-label="Your rating">
+              {[1, 2, 3, 4, 5].map((n) => (
                 <button
-                  aria-pressed={state.interests.includes(t)}
-                  className={state.interests.includes(t) ? "selected" : ""}
-                  key={t}
-                  onClick={() =>
-                    onChange({
-                      ...state,
-                      interests: state.interests.includes(t)
-                        ? state.interests.filter((i) => i !== t)
-                        : [...state.interests, t],
-                    })
-                  }
+                  key={n}
+                  aria-pressed={draft.rating === n}
+                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  onClick={() => edit({ ...draft, rating: n })}
                 >
-                  {t}
+                  <Star
+                    size={24}
+                    fill={draft.rating >= n ? "currentColor" : "none"}
+                  />
                 </button>
               ))}
             </div>
-            <p className="fine-print">
-              <ShieldCheck size={13} /> Future-trip preferences. Existing trips
-              keep their own brief.
-            </p>
-          </section>
-          <section className="settings-card">
-            <div className="section-line">
-              <h3>Watch your matches change</h3>
-              <span className="mini-label">DEMO RULES</span>
+            <h4>What worked?</h4>
+            <div className="chip-row">
+              {relevant.map((t) => (
+                <Chip
+                  key={t}
+                  pressed={draft.liked.includes(t)}
+                  onClick={() => toggle(t, true)}
+                >
+                  {draft.liked.includes(t) && <Check size={14} />} {t}
+                </Chip>
+              ))}
             </div>
-            <p className="fine-print">
-              Transparent local scoring uses selected interests, pace, ratings
-              and matching place tags. Only attributes present in the sample
-              place tags affect ordering; service and food-quality evidence
-              still needs real reviews. Scores are not measured probabilities.
+            <h4>What would you rather avoid?</h4>
+            <div className="chip-row">
+              {relevant.map((t) => (
+                <Chip
+                  key={t}
+                  pressed={draft.disliked.includes(t)}
+                  onClick={() => toggle(t, false)}
+                  aria-label={`Avoid ${t}`}
+                >
+                  {draft.disliked.includes(t) && <Check size={14} />} {t}
+                </Chip>
+              ))}
+            </div>
+            <p className="muted-note">
+              {dirty
+                ? "Unsaved. Your draft is kept if you switch places."
+                : "Up to date."}{" "}
+              Pick only what you actually experienced.
             </p>
-            {impact !== null && (
-              <section
-                className="taste-impact"
-                aria-label="Impact of your latest feedback"
+            <div className="button-row">
+              <Button
+                variant="primary"
+                disabled={!draft.rating || !dirty}
+                onClick={save}
               >
-                <h4>What changed after your save</h4>
+                Save privately
+              </Button>
+              {onReview && (
+                <Button variant="ghost" onClick={() => onReview(place.id)}>
+                  <PenLine size={16} /> Write a public review instead
+                </Button>
+              )}
+            </div>
+            {impact && (
+              <div className="taste-impact" role="status">
+                <h4>What changed for you</h4>
                 {impact.length ? (
-                  impact.map((p) => (
-                    <div key={p.name}>
-                      <strong>{p.name}</strong>
-                      <p>
-                        {p.before} → {p.after} demo fit · position {p.oldRank} →{" "}
-                        {p.newRank}
-                      </p>
-                      <small>{p.reason}</small>
-                    </div>
-                  ))
+                  <ul className="change-list">
+                    {impact.map((c) => (
+                      <li key={c.name}>
+                        <span>{c.name}</span>
+                        <strong>
+                          {c.before} <ArrowRight size={14} /> {c.after}
+                        </strong>
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  <p>
-                    No score changes for these sample places. Your feedback is
-                    saved; some qualities need review data before they can
-                    affect matching.
+                  <p className="muted-note">
+                    No scores moved. Pick a quality you liked or disliked to
+                    teach it more.
                   </p>
                 )}
-              </section>
+              </div>
             )}
-            <details className="taste-rules">
-              <summary>How these demo scores work</summary>
-              <p>
-                Start at 50. Each matching interest or liked attribute adds 7;
-                each disliked attribute subtracts 12. Easy-pace places add 5 for
-                a relaxed traveler. Your own rating adjusts that place by 6
-                points per star above or below 3. Scores stay between 15 and 95;
-                they are comparison aids, not certainty.
-              </p>
-            </details>
-            {matches.slice(0, 4).map((p) => {
-              const fit = tasteMatch(p, state);
-              return (
-                <article className="taste-match" key={p.id}>
-                  <button disabled={!onOpen} onClick={() => onOpen?.(p.id)}>
-                    <strong>{p.name}</strong>
-                    <span>{fit.score}/100 demo fit</span>
-                  </button>
-                  <p>
-                    {fit.reasons.length
-                      ? `Matches: ${fit.reasons.join(", ")}`
-                      : "An option to explore; limited taste evidence."}
-                  </p>
-                  {fit.cautions.length > 0 && (
-                    <p>Tradeoffs: {fit.cautions.join(", ")}</p>
-                  )}
-                </article>
-              );
-            })}
           </section>
-        </aside>
+        )}
       </div>
+
+      <aside className="taste-side">
+        <Section title="What it has learned">
+          <p className="muted-note">
+            From your ratings, not your stars alone. One rating is a clue, not a
+            label.
+          </p>
+          <h4>More of</h4>
+          <p>
+            {more.length
+              ? more.join(", ")
+              : "Nothing yet. Rate a place and pick what worked."}
+          </p>
+          <h4>Less of</h4>
+          <p>{less.length ? less.join(", ") : "Nothing yet."}</p>
+        </Section>
+        <Section title="Your ratings">
+          {signals.length ? (
+            <ul className="signal-list">
+              {signals.map(([id, s]) => (
+                <li key={id}>
+                  <button className="link-button" onClick={() => pick(id)}>
+                    {places.find((p) => p.id === id)?.name || id}
+                  </button>
+                  <span className="muted-note">{s.rating}/5</span>
+                  <IconButton
+                    label={`Remove your rating of ${places.find((p) => p.id === id)?.name || id}`}
+                    onClick={() => {
+                      const next = { ...state.tasteSignals };
+                      delete next[id];
+                      setRemoved({ id, signal: s });
+                      onChange({ ...state, tasteSignals: next });
+                      if (selected === id) setSelected(null);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted-note">
+              Your ratings appear here. You can change or remove them any time.
+            </p>
+          )}
+          {removed && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                onChange({
+                  ...state,
+                  tasteSignals: {
+                    ...state.tasteSignals,
+                    [removed.id]: removed.signal,
+                  },
+                });
+                setRemoved(null);
+              }}
+            >
+              Undo removal
+            </Button>
+          )}
+        </Section>
+        <Section title="Top matches right now">
+          <ul className="signal-list">
+            {top.map((p) => (
+              <li key={p.id}>
+                <button className="link-button" onClick={() => onOpen?.(p.id)}>
+                  {p.name}
+                </button>
+                <span className="muted-note">{p.fit}/100</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted-note">
+            <ShieldCheck size={14} /> Sample scoring rules. A comparison aid,
+            not a prediction.
+          </p>
+        </Section>
+      </aside>
     </div>
   );
 }

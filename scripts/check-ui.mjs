@@ -19,7 +19,15 @@ if (!args.includes("--url")) {
   base = `http://127.0.0.1:${port}/`;
   server = spawn(
     "npx",
-    ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    [
+      "vite",
+      "preview",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(port),
+      "--strictPort",
+    ],
     { stdio: "ignore" },
   );
   for (let i = 0; i < 60; i++) {
@@ -52,7 +60,8 @@ function audit({ touch }) {
       el.textContent?.trim().replace(/\s+/g, " ").slice(0, 40) ||
       el.getAttribute("placeholder") ||
       el.tagName.toLowerCase();
-    const cls = typeof el.className === "string" ? el.className.split(" ")[0] : "";
+    const cls =
+      typeof el.className === "string" ? el.className.split(" ")[0] : "";
     return `${el.tagName.toLowerCase()}${cls ? "." + cls : ""} "${name}"`;
   };
   const controls = [
@@ -71,6 +80,8 @@ function audit({ touch }) {
   // owning element.
   if (touch) {
     for (const el of controls) {
+      // Map pins have an equivalent, larger target in the day list.
+      if (el.closest(".route-map")) continue;
       const target = el.matches("input[type=checkbox], input[type=radio]")
         ? el.closest("label") || el
         : el;
@@ -80,6 +91,13 @@ function audit({ touch }) {
       const b = target.getBoundingClientRect();
       const cx = b.left + b.width / 2,
         cy = b.top + b.height / 2;
+      // Covered by a sheet, scrim or dialog: not reachable right now.
+      const atCentre = document.elementFromPoint(cx, cy);
+      if (
+        !atCentre ||
+        !(target.contains(atCentre) || atCentre.contains(target))
+      )
+        continue;
       const hits = [
         [cx - 21, cy],
         [cx + 21, cy],
@@ -98,7 +116,33 @@ function audit({ touch }) {
   }
 
   // 2. Spacing between neighbouring controls.
-  const grouped = (el) => el.closest(".segmented, [role=tablist], .map-canvas");
+  const grouped = (el) =>
+    el.closest(
+      ".segmented, [role=tablist], .route-map, .star-picker, .tab-bar, .rail-items",
+    );
+  // Controls in different regions (main content, side panel, nav, status bar)
+  // are separated by the layout itself.
+  const region = (el) =>
+    el.closest("main, aside, nav, footer, [role=dialog], .toast");
+  const scrollRoot = (el) => {
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const o = getComputedStyle(n).overflowY;
+      if (o === "auto" || o === "scroll") return n;
+    }
+    return null;
+  };
+  // Controls scrolled out of their scroll container aren't visible.
+  const clipped = (el) => {
+    const r = el.getBoundingClientRect();
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const o = getComputedStyle(n).overflowY;
+      if (o === "auto" || o === "scroll" || o === "hidden") {
+        const c = n.getBoundingClientRect();
+        if (r.bottom <= c.top + 1 || r.top >= c.bottom - 1) return true;
+      }
+    }
+    return false;
+  };
   // Controls in different fixed/sticky layers only touch while scrolling.
   const layer = (el) => {
     for (let n = el; n; n = n.parentElement) {
@@ -115,13 +159,21 @@ function audit({ touch }) {
       if (a.contains(b) || b.contains(a)) continue;
       if (grouped(a) && grouped(a) === grouped(b)) continue;
       if (layer(a) !== layer(b)) continue;
-      const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-      const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+      if (region(a) !== region(b)) continue;
+      if (clipped(a) || clipped(b)) continue;
+      if (scrollRoot(a) !== scrollRoot(b)) continue;
+      const overlapY =
+        Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+      const overlapX =
+        Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
       let gap = null;
       if (overlapY > 4) gap = Math.max(rb.left - ra.right, ra.left - rb.right);
-      else if (overlapX > 4) gap = Math.max(rb.top - ra.bottom, ra.top - rb.bottom);
+      else if (overlapX > 4)
+        gap = Math.max(rb.top - ra.bottom, ra.top - rb.bottom);
       if (gap !== null && gap >= 0 && gap < 7.5)
-        out.push(`controls ${Math.round(gap)}px apart: ${describe(a)} / ${describe(b)}`);
+        out.push(
+          `controls ${Math.round(gap)}px apart: ${describe(a)} / ${describe(b)}`,
+        );
     }
   }
 
@@ -163,8 +215,9 @@ for (const vp of viewports) {
         errors.push(`console: ${m.text()}`);
     });
     // External images are blocked in some environments; never fail on them.
-    await page.route(/images\.unsplash\.com|fonts\.(googleapis|gstatic)\.com/, (r) =>
-      r.abort(),
+    await page.route(
+      /images\.unsplash\.com|fonts\.(googleapis|gstatic)\.com/,
+      (r) => r.abort(),
     );
     try {
       await page.goto(base + (screen.hash || ""), { waitUntil: "load" });
@@ -178,7 +231,9 @@ for (const vp of viewports) {
       } else console.log(`✓ ${screen.name} @${vp.name}`);
     } catch (e) {
       failures++;
-      console.log(`✗ ${screen.name} @${vp.name}: setup failed: ${e.message.split("\n")[0]}`);
+      console.log(
+        `✗ ${screen.name} @${vp.name}: setup failed: ${e.message.split("\n")[0]}`,
+      );
     }
     await context.close();
   }

@@ -1,28 +1,17 @@
-import type { Conversation } from "./components/Inbox";
 import type { EditProposal } from "./proposals.ts";
 export type Collection = {
   id: string;
   name: string;
   placeIds: string[];
+  /** Saved member itineraries (only the default Saved collection uses this). */
+  itineraryIds?: string[];
   note: string;
   archived?: boolean;
   dayGroups?: Day[];
   sourceTripId?: string;
+  /** Set on a trip's own Ideas collection. */
+  tripId?: string;
 };
-export type Page =
-  | "connected"
-  | "messages"
-  | "home"
-  | "ideas"
-  | "plan"
-  | "trips"
-  | "discover"
-  | "saved"
-  | "taste"
-  | "community"
-  | "settings"
-  | "notifications"
-  | "moderation";
 export type Place = {
   photos?: { src: string; caption: string; source: string }[];
   id: string;
@@ -42,7 +31,18 @@ export type Place = {
   y: number;
   address: string;
 };
+export type BriefField =
+  | "where"
+  | "from"
+  | "who"
+  | "when"
+  | "what"
+  | "budget"
+  | "pace";
+export type FieldStatus = "confirmed" | "profile" | "assumed" | "unknown";
 export type Brief = {
+  /** How each field was obtained, shown on the brief checklist. */
+  status?: Partial<Record<BriefField, FieldStatus>>;
   sourceItineraryId?: string;
   collectionId?: string;
   ideaIds?: string[];
@@ -70,6 +70,10 @@ export type Trip = {
   days: Day[];
   messages: Message[];
   status: "planning" | "traveling" | "complete" | "archived";
+  /** Last time the trip changed (ms since epoch). */
+  updatedAt?: number;
+  /** Places checked off as visited during the trip. */
+  visited?: string[];
   bookings: { name: string; reference: string; note: string }[];
   partners: string[];
   comments: string[];
@@ -84,15 +88,11 @@ export type Review = {
   reported: boolean;
 };
 export type State = {
-  conversations?: Conversation[];
-  activeConversation?: string;
-  blockedMembers?: string[];
-  messageReports?: string[];
-  messagePrivacy?: "requests" | "nobody";
-  savedItineraries?: string[];
   trips: Trip[];
   activeId: string | null;
-  saved: string[];
+  /** Legacy lists, folded into collections by migrateWorkspace. */
+  saved?: string[];
+  savedItineraries?: string[];
   interests: string[];
   pace: string;
   reviews: Review[];
@@ -117,8 +117,15 @@ export type State = {
   activeCollectionId?: string;
   recentPlaces?: string[];
   researchOrigins?: Record<string, string>;
-  startScreen?: "plan" | "home" | "resume";
-  lastPage?: Page;
+  /** "trips" opens the trip list; "resume" reopens the last screen. */
+  startScreen?: "trips" | "resume" | "plan" | "home";
+  lastHash?: string;
+  /** Discover → Places filter. */
+  discoverKind?: "all" | "food" | "experience" | "stay";
+  /** Hints the traveller has dismissed (replayable from Help). */
+  dismissedHints?: string[];
+  /** Whether the post-trip invitation card was dismissed, per trip. */
+  inviteDismissed?: string[];
   chatDrafts?: Record<string, string>;
   viewContext?: Record<string, { day: string; scroll: number; place?: string }>;
 };
@@ -373,7 +380,6 @@ export function makeTrip(brief = defaultBrief): Trip {
 export const initialState: State = {
   trips: [],
   activeId: null,
-  saved: [],
   interests: ["Local food", "Architecture", "Art & culture"],
   pace: "Relaxed",
   reviews: [],
@@ -430,17 +436,62 @@ export function checkTrip(trip: Trip): string[] {
   return issues;
 }
 
+export const SAVED_ID = "saved";
+export const tripIdeasId = (tripId: string) => `ideas-${tripId}`;
+
+/**
+ * Folds every legacy "keep for later" list into collections:
+ * - `saved` places and `savedItineraries` → the default Saved collection
+ * - `ideaIds` → the "My Chicago ideas" collection
+ * - every trip gets its own Ideas collection
+ * Nothing is dropped, and running it again changes nothing.
+ */
 export function migrateWorkspace(state: State): State {
-  return {
-    ...state,
-    collections: state.collections || [
-      {
+  const collections = (state.collections || []).map((c) => ({ ...c }));
+  const merge = (a: string[] = [], b: string[] = []) => [
+    ...new Set([...a, ...b]),
+  ];
+  let saved = collections.find((c) => c.id === SAVED_ID);
+  if (!saved) {
+    saved = {
+      id: SAVED_ID,
+      name: "Saved",
+      placeIds: [],
+      itineraryIds: [],
+      note: "",
+    };
+    collections.unshift(saved);
+  }
+  saved.placeIds = merge(saved.placeIds, state.saved);
+  saved.itineraryIds = merge(saved.itineraryIds, state.savedItineraries);
+  if (state.ideaIds?.length) {
+    let ideas = collections.find((c) => c.id === "legacy-ideas");
+    if (!ideas) {
+      ideas = {
         id: "legacy-ideas",
         name: "My Chicago ideas",
-        placeIds: [...(state.ideaIds || [])],
+        placeIds: [],
         note: "",
         archived: false,
-      },
-    ],
+      };
+      collections.splice(1, 0, ideas);
+    }
+    ideas.placeIds = merge(ideas.placeIds, state.ideaIds);
+  }
+  for (const trip of state.trips)
+    if (!collections.some((c) => c.tripId === trip.id))
+      collections.push({
+        id: tripIdeasId(trip.id),
+        name: `${trip.name} · ideas`,
+        placeIds: [],
+        note: "",
+        tripId: trip.id,
+      });
+  return {
+    ...state,
+    collections,
+    saved: [],
+    savedItineraries: [],
+    ideaIds: [],
   };
 }

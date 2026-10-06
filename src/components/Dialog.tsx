@@ -1,5 +1,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { IconButton } from "../ui";
+
+/** Modal dialog with focus trap. Used only for share, edits and confirmations. */
 export default function Dialog({
   title,
   description,
@@ -21,7 +24,7 @@ export default function Dialog({
           "button,input,textarea,select,a[href]",
         ) || [],
       ).filter((n) => !n.hasAttribute("disabled"));
-    focusable()[0]?.focus();
+    (focusable()[1] || focusable()[0])?.focus();
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
@@ -46,9 +49,7 @@ export default function Dialog({
   return (
     <div
       className="dialog-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         className="dialog"
@@ -57,21 +58,16 @@ export default function Dialog({
         aria-labelledby="dialog-title"
         ref={ref}
       >
-        <div className="dialog-header">
-          <div>
-            <span className="eyebrow">XPMATCH</span>
-            <h2 id="dialog-title">{title}</h2>
-          </div>
-          <button
-            className="icon-button"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
+        <header className="dialog-head">
+          <h2 id="dialog-title">{title}</h2>
+          <IconButton label="Close" onClick={onClose}>
             <X size={20} />
-          </button>
+          </IconButton>
+        </header>
+        <div className="dialog-body">
+          {description && <p className="dialog-lead">{description}</p>}
+          {children}
         </div>
-        {description && <p className="dialog-description">{description}</p>}
-        {children}
       </div>
     </div>
   );

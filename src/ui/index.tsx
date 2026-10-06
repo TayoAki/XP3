@@ -2,6 +2,7 @@ import {
   forwardRef,
   useEffect,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
@@ -208,6 +209,80 @@ export function Sheet({
         </div>
         <div className="sheet-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+export type MenuItem = {
+  label: string;
+  icon?: ReactNode;
+  onSelect: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+};
+
+/** A "…" style menu: a trigger button with a popover list of actions. */
+export function Menu({
+  label,
+  trigger,
+  items,
+  align = "end",
+}: {
+  label: string;
+  trigger: ReactNode;
+  items: MenuItem[];
+  align?: "start" | "end";
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === "Escape"
+          : !root.current?.contains(e.target as Node)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  return (
+    <div className="menu" ref={root}>
+      <IconButton
+        label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {trigger}
+      </IconButton>
+      {open && (
+        <div className={`menu-list menu-${align}`} role="menu">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              className={item.danger ? "menu-danger" : undefined}
+              onClick={() => {
+                setOpen(false);
+                item.onSelect();
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

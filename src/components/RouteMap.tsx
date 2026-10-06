@@ -21,8 +21,19 @@ export default function RouteMap({
             patternUnits="userSpaceOnUse"
           >
             <rect width="57" height="42" style={{ fill: "var(--map-land)" }} />
-            <rect x="5" y="5" width="47" height="32" rx="3" style={{ fill: "var(--map-block)" }} />
-            <path d="M0 0H57M0 0V42" style={{ stroke: "var(--surface)" }} strokeWidth="5" />
+            <rect
+              x="5"
+              y="5"
+              width="47"
+              height="32"
+              rx="3"
+              style={{ fill: "var(--map-block)" }}
+            />
+            <path
+              d="M0 0H57M0 0V42"
+              style={{ stroke: "var(--surface)" }}
+              strokeWidth="5"
+            />
           </pattern>
         </defs>
         <rect width="700" height="270" fill="url(#blocks)" />
@@ -33,8 +44,19 @@ export default function RouteMap({
           strokeWidth="23"
           fill="none"
         />
-        <path d="M625 0L592 270" style={{ stroke: "var(--map-river)" }} strokeWidth="2" />
-        <rect x="451" y="144" width="77" height="97" rx="11" style={{ fill: "var(--map-park)" }} />
+        <path
+          d="M625 0L592 270"
+          style={{ stroke: "var(--map-river)" }}
+          strokeWidth="2"
+        />
+        <rect
+          x="451"
+          y="144"
+          width="77"
+          height="97"
+          rx="11"
+          style={{ fill: "var(--map-park)" }}
+        />
         <path
           d="M300 0V270M120 0V270M0 179H580"
           style={{ stroke: "var(--surface)" }}

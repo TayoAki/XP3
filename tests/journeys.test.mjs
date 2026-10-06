@@ -1,7 +1,7 @@
 // Logic checks for trip edits and workspace migration. Run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeTrip, initialState, migrateWorkspace } from "../src/model.ts";
+import { makeTrip } from "../src/model.ts";
 import {
   proposalFor,
   applyProposals,
@@ -26,19 +26,4 @@ test("proposals apply only selected edits, by index, and reject stale ones", () 
     "gage",
     "art",
   ]);
-});
-
-test("workspace migration preserves data and is idempotent", () => {
-  const trip = makeTrip();
-  const legacy = {
-    ...initialState,
-    trips: [trip],
-    ideaIds: ["river", "art"],
-    researchNotes: { river: "Keep this note" },
-  };
-  const migrated = migrateWorkspace(legacy);
-  assert.deepEqual(migrated.trips, legacy.trips);
-  assert.deepEqual(migrated.researchNotes, legacy.researchNotes);
-  assert.deepEqual(migrated.collections[0].placeIds, ["river", "art"]);
-  assert.deepEqual(migrateWorkspace(migrated), migrated);
 });

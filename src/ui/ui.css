@@ -246,6 +246,46 @@
     min-height: var(--target);
   }
   .segmented button {
-    min-height: var(--target-dense);
+    min-height: var(--target);
   }
+}
+
+.menu {
+  position: relative;
+}
+.menu-list {
+  position: absolute;
+  top: calc(100% + var(--s-1));
+  z-index: 60;
+  min-width: 240px;
+  padding: var(--s-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-2);
+}
+.menu-end {
+  right: 0;
+}
+.menu-start {
+  left: 0;
+}
+.menu-list button {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--target);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-sm);
+  text-align: left;
+  font-size: var(--t-14);
+  color: var(--ink);
+}
+.menu-list button:hover:not(:disabled),
+.menu-list button:focus-visible {
+  background: var(--surface-sunken);
+}
+.menu-list .menu-danger {
+  color: var(--danger);
 }
